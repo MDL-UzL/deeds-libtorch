@@ -1,0 +1,5 @@
+build
+
+# libtorch files and folders
+libtorch
+libtorch-macos-1.8.1.zip
