@@ -205,10 +205,15 @@ int main (int argc, char * const argv[]) {
 	return 0;
 }
 
-int64_t applyBCV_main() {
-    int64_t argc = 1;
-    char* argv[] = {"-h", NULL};
-    return main(argc, argv);
+int64_t applyBCV_main(int64_t _argc, std::vector<std::string> _argv) {
+    std::vector<const char *> argv;
+    argv.reserve(_argv.size() + 1);
+    for(auto it = std::begin(_argv); it != std::end(_argv); ++it) {
+        argv.push_back(it->c_str());
+    }
+    argv.push_back(nullptr);  // needed to terminate the args list
+
+    return main(_argc, const_cast<char* const *>(argv.data()));
 }
 
 TORCH_LIBRARY(deeds_applyBCV, m) {
