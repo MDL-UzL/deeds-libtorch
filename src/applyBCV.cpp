@@ -106,12 +106,13 @@ int main (int argc, char * const argv[]) {
 
     //==ALWAYS ALLOCATE MEMORY FOR HEADER ===/
     char* header=new char[352];
-
+    //TODO: Read nifti
     readNifti(args.moving_file,seg2,header,M,N,O,P);
 
     image_m=M; image_n=N; image_o=O;
 
-    int m=image_m; int n=image_n; int o=image_o; int sz=m*n*o;
+    int m=image_m; int n=image_n; int o=image_o; \
+    int sz=m*n*o; //sz == total image size over all dimensions
 
 
 
@@ -125,6 +126,7 @@ int main (int argc, char * const argv[]) {
             split_affine=-1;
         }
 
+        //TODO read mat.txt
         cout<<"Reading affine matrix file: "<<args.affine_file.substr(split_affine+1)<<"\n";
         ifstream matfile;
         matfile.open(args.affine_file);
@@ -164,6 +166,7 @@ int main (int argc, char * const argv[]) {
 
     int sz3=flow.size()/3;
     int grid_step=round(pow((float)sz/(float)sz3,0.3333333));
+    // reduce grid to sqrt_3(3*full_size/flow_size) (uniform grid step in every direction)
 
     cout<<"grid step "<<grid_step<<"\n";
 
@@ -171,32 +174,39 @@ int main (int argc, char * const argv[]) {
 
     //set initial flow-fields to 0; i indicates backward (inverse) transform
     //u is in x-direction (2nd dimension), v in y-direction (1st dim) and w in z-direction (3rd dim)
+
+    // init 3dim flow xyz <-> uvw * LEN*WIDTH*HEIGHT -> full size flow field
     float* ux=new float[sz]; float* vx=new float[sz]; float* wx=new float[sz];
     for(int i=0;i<sz;i++){
-        ux[i]=0.0; vx[i]=0.0; wx[i]=0.0;
+        ux[i]=0.0;
+        vx[i]=0.0;
+        wx[i]=0.0;
     }
 
     int m1,n1,o1,sz1;
     m1=m/grid_step; n1=n/grid_step; o1=o/grid_step; sz1=m1*n1*o1;
     float* u1=new float[sz1]; float* v1=new float[sz1]; float* w1=new float[sz1];
 
+    //Fill gridded flow field
     for(int i=0;i<sz1;i++){
-        u1[i]=flow[i]; v1[i]=flow[i+sz1]; w1[i]=flow[i+sz1*2];
+        u1[i]=flow[i];
+        v1[i]=flow[i+sz1];
+        w1[i]=flow[i+sz1*2];
 
     }
-
+    //TODO Upsample, in: full size flow field (returned value), reduced flow field, full dimension image size, reduced flow field size
     upsampleDeformationsCL(ux,vx,wx,u1,v1,w1,m,n,o,m1,n1,o1);
 
 
 
     short* segw=new short[sz];
-
+    //TODO Fill
     fill(segw,segw+sz,(short)0);
-
+    //TODO warpAffine
     warpAffineS(segw,seg2,X,ux,vx,wx);
 
 
-
+    // TODO Write nifti (p=1, 3d image if o > 1), copy header
     gzWriteSegment(args.deformed_file,segw,header,m,n,o,1);
 
 
