@@ -3,32 +3,41 @@
 
 
 void interp3(float* interp, // interpolated output
-			 float* input, //
+			 float* input, // gridded flow field
 			 float* x1,float* y1,float* z1, //helper var (output size)
 			 int m,int n,int o, //output size
 			 int m2,int n2,int o2, //input size
 			 bool flag){
-	for(int k=0;k<o;k++){
-		for(int j=0;j<n;j++){
-			for(int i=0;i<m;i++){
+	for(int k=0;k<o;k++){ //z
+		for(int j=0;j<n;j++){ //y
+			for(int i=0;i<m;i++){ //x
 				int x=floor(x1[i+j*m+k*m*n]); int y=floor(y1[i+j*m+k*m*n]);  int z=floor(z1[i+j*m+k*m*n]);
 				float dx=x1[i+j*m+k*m*n]-x; float dy=y1[i+j*m+k*m*n]-y; float dz=z1[i+j*m+k*m*n]-z; // dx,dy,dz in gridded flow field relative coordinates
 
 				if(flag){
 					x+=j; y+=i; z+=k;
 				}
+				//trilinear interpolation: 8x partial cube volume from desired corner point * value of corner point
 				interp[i+j*m+k*m*n]=
-				(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)	+min(max(x,0),n2-1)*m2		+min(max(z,0),o2-1)*m2*n2]
+				//partial cube volume		//value at corner
+											//x									//y											//z
+				//clamp
+				//clamping seems to be wrong (x <-> y clamping is mixed)
 
-				+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)	+min(max(x+1,0),n2-1)*m2	+min(max(z,0),o2-1)*m2*n2]
-				+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)	+min(max(x,0),n2-1)*m2		+min(max(z,0),o2-1)*m2*n2]
-				+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)	+min(max(x,0),n2-1)*m2		+min(max(z+1,0),o2-1)*m2*n2]
+				//							//(0 ... x_interp ... x_idx max)	//(0 ... y_interp ... y_idx max)*x_idx_max	//(0 ... z_interp ... z_idx max)*x_idx_max*y_idx_max
 
-				+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)	+min(max(x,0),n2-1)*m2		+min(max(z+1,0),o2-1)*m2*n2]
-				+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)	+min(max(x+1,0),n2-1)*m2	+min(max(z+1,0),o2-1)*m2*n2]
-				+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)	+min(max(x+1,0),n2-1)*m2	+min(max(z,0),o2-1)*m2*n2]
+				//reziprocal: when dx=1  	we want to have val at idx_x
+				(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+				//reziprocal: when dx=0  	we want to have val at idx_x+1
+				+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+				+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+				+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
 
-				+dx*dy*dz*					input[min(max(y+1,0),m2-1)	+min(max(x+1,0),n2-1)*m2	+min(max(z+1,0),o2-1)*m2*n2];
+				+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+				+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+				+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+
+				+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2];
 			}
 		}
 	}
@@ -274,9 +283,9 @@ void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow fiel
         }
     }
 
-    interp3(u1,u0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate x, u1 is returned
-    interp3(v1,v0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate y, v1 is returned
-    interp3(w1,w0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate z, w1 is returned
+    interp3(u1,u0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate x dir, u1 is returned
+    interp3(v1,v0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate y dir, v1 is returned
+    interp3(w1,w0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate z dir, w1 is returned
 
     delete []x1;
     delete []y1;
