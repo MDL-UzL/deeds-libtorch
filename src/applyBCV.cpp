@@ -111,7 +111,7 @@ int main (int argc, char * const argv[]) {
 
     image_m=M; image_n=N; image_o=O;
 
-    int m=image_m; int n=image_n; int o=image_o; \
+    int m=image_m; int n=image_n; int o=image_o;
     int sz=m*n*o; //sz == total image size over all dimensions
 
 
@@ -187,7 +187,7 @@ int main (int argc, char * const argv[]) {
     m1=m/grid_step; n1=n/grid_step; o1=o/grid_step; sz1=m1*n1*o1;
     float* u1=new float[sz1]; float* v1=new float[sz1]; float* w1=new float[sz1];
 
-    //Fill gridded flow field
+    //Fill gridded flow field vectors. orig flow field ordering= [x0,x1,x2, at y0,z0; x0,x1,x2 at y1,z0 ...]
     for(int i=0;i<sz1;i++){
         u1[i]=flow[i];
         v1[i]=flow[i+sz1];
@@ -203,10 +203,11 @@ int main (int argc, char * const argv[]) {
     //TODO Fill
     fill(segw,segw+sz,(short)0);
     //TODO warpAffine
+    //output segw = seg_warped
     warpAffineS(segw,seg2,X,ux,vx,wx);
 
 
-    // TODO Write nifti (p=1, 3d image if o > 1), copy header
+    // TODO Write nifti (p=1 -> 3d image if o > 1), copy header
     gzWriteSegment(args.deformed_file,segw,header,m,n,o,1);
 
 

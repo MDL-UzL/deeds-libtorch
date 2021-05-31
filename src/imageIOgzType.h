@@ -5,12 +5,12 @@
 template <typename Type>
 
 void readNifti(string filestr,Type*& vol,char*& header,int& m,int& n,int& o,int& p){
-    
+
     //convert input string into char* array
     char* filename=new char[filestr.size()+1];
     copy(filestr.begin(),filestr.end(),filename);
     filename[filestr.size()]='\0';
-    
+
     gzFile file=gzopen(filename,"rb");
     if(!file){
         printf("gzopen of '%s' failed.\n",filename);
@@ -18,9 +18,9 @@ void readNifti(string filestr,Type*& vol,char*& header,int& m,int& n,int& o,int&
     }else{
         //cout<<"reading "<<filestr<<"\n";
     }
-    
+
     gzread(file,header,352);
-    
+
 
     short* dimensions;
 
@@ -29,16 +29,16 @@ void readNifti(string filestr,Type*& vol,char*& header,int& m,int& n,int& o,int&
     n=(int)dimensions[2];
     o=(int)dimensions[3];
     p=(int)dimensions[4];
-    
+
     int sz=m*n*o*p;
-    
+
     vol=new Type[sz];
 
     //printf("Read image with dimensions %dx%dx%dx%d\n",m,n,o,p);
     short* datatype; //read datatype (and bitpix)
     datatype=reinterpret_cast<short*>(header+70);
     short bitpix=datatype[1];
-    
+
     long charbytes=bitpix/8;
     //
     char* filecharptr=new char[m*n*o*p*charbytes];
@@ -96,12 +96,12 @@ void readNifti(string filestr,Type*& vol,char*& header,int& m,int& n,int& o,int&
             exit(1);
     }
     delete filecharptr;
-    
+
     //gzread(file,vol,sz*sizeof(Type));
     //vol=reinterpret_cast<Type*>(vol);
-    
+
     gzclose(file);
-    
+
 }
 
 
@@ -110,7 +110,7 @@ void writeNifti(string filestr,float* vol,char* header,int m,int n,int o,int k){
     char* filename=new char[filestr.size()+1];
     copy(filestr.begin(),filestr.end(),filename);
     filename[filestr.size()]='\0';
-    
+
     char* header2=new char[352];
     copy(header,header+352,header2);
     int dim=o>1?3:2;
@@ -127,7 +127,7 @@ void writeNifti(string filestr,float* vol,char* header,int m,int n,int o,int k){
     datatype[0]=16; datatype[1]=32; //float datatype
     char* datachar=reinterpret_cast<char*>(datatype);
     copy(datachar,datachar+4,header2+70);
-    
+
     //printf("Writing image with dimensions %dx%dx%d\n",m,n,o);
 
     ofstream file(filename,ios::out|ios::binary);
@@ -148,7 +148,7 @@ void writeSegment(string filestr,short* vol,char* header,int m,int n,int o){
     char* filename=new char[filestr.size()+1];
     copy(filestr.begin(),filestr.end(),filename);
     filename[filestr.size()]='\0';
-    
+
     char* header2=new char[352];
     copy(header,header+352,header2);
     int dim=o>1?3:2;
@@ -156,14 +156,14 @@ void writeSegment(string filestr,short* vol,char* header,int m,int n,int o){
     dimensions[0]=dim; dimensions[1]=m; dimensions[2]=n; dimensions[3]=o;
     char* dimchar=reinterpret_cast<char*>(dimensions);
     copy(dimchar,dimchar+8,header2+40);
-    
+
     short* datatype=new short[2];
     datatype[0]=4; datatype[1]=512; //short datatype
     char* datachar=reinterpret_cast<char*>(datatype);
     copy(datachar,datachar+4,header2+70);
-    
+
     //printf("Writing segmentation with dimensions %dx%dx%d\n",m,n,o);
-    
+
     ofstream file(filename,ios::out|ios::binary);
     //opens file for binary-output
 	if(file.is_open()){
@@ -179,13 +179,13 @@ void writeSegment(string filestr,short* vol,char* header,int m,int n,int o){
 
 
 void gzWriteNifti(string filestr,float* data,char* header,int m,int n,int o,int p){
-    
+
     int sz=m*n*o*p;
     //convert input string into char* array
     char* filename=new char[filestr.size()+1];
     copy(filestr.begin(),filestr.end(),filename);
     filename[filestr.size()]='\0';
-    
+
     //do not change original header, define (new )dimensions and datatype
     char* header2=new char[352];
     copy(header,header+352,header2);
@@ -200,14 +200,14 @@ void gzWriteNifti(string filestr,float* data,char* header,int m,int n,int o,int 
     datatype[0]=16; datatype[1]=32; //float datatype
     char* typechar=reinterpret_cast<char*>(datatype);
     copy(typechar,typechar+4,header2+70);
-    
+
     //copy header and data into out
     int size=352+sz*sizeof(float);
     char* out2=new char[size];
     copy(header2,header2+352,out2);
     char* datachar=reinterpret_cast<char*>(data);
     copy(datachar,datachar+sz*sizeof(float),out2+352);
-    
+    //difference to write nifti: gz output from here.
     //write gzipped file
     gzFile file2=gzopen(filename,"wb");
     if(!file2){
@@ -216,7 +216,7 @@ void gzWriteNifti(string filestr,float* data,char* header,int m,int n,int o,int 
     }
     int err=gzwrite(file2,(unsigned char*)out2,size);
     gzclose(file2);
-    
+
     delete out2; delete header2;
 }
 
@@ -226,7 +226,7 @@ void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,in
     char* filename=new char[filestr.size()+1];
     copy(filestr.begin(),filestr.end(),filename);
     filename[filestr.size()]='\0';
-    
+
     //do not change original header, define (new )dimensions and datatype
     char* header2=new char[352];
     copy(header,header+352,header2);
@@ -241,7 +241,7 @@ void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,in
     datatype[0]=4; datatype[1]=16;// edit 08-16 - 512; //short datatype
     char* typechar=reinterpret_cast<char*>(datatype);
     copy(typechar,typechar+4,header2+70);
-    
+    //difference to write segment: gz output
     //copy header and data into out
     int size=352+sz*sizeof(short);
     char* out2=new char[size];
@@ -257,9 +257,9 @@ void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,in
     }
     int err=gzwrite(file2,(unsigned char*)out2,size);
     gzclose(file2);
-    
+
     delete out2; delete header2;
-    
+
 }
 
 

@@ -6,11 +6,11 @@ void interp3(float* interp, // interpolated output
 			 float* input, // gridded flow field
 			 float* x1,float* y1,float* z1, //helper var (output size)
 			 int m,int n,int o, //output size
-			 int m2,int n2,int o2, //input size
+			 int m2,int n2,int o2, //gridded flow field size
 			 bool flag){
-	for(int k=0;k<o;k++){ //z
-		for(int j=0;j<n;j++){ //y
-			for(int i=0;i<m;i++){ //x
+	for(int k=0;k<o;k++){ //iterate output z
+		for(int j=0;j<n;j++){ // iterate output y
+			for(int i=0;i<m;i++){ //iterate x
 				int x=floor(x1[i+j*m+k*m*n]); int y=floor(y1[i+j*m+k*m*n]);  int z=floor(z1[i+j*m+k*m*n]);
 				float dx=x1[i+j*m+k*m*n]-x; float dy=y1[i+j*m+k*m*n]-y; float dz=z1[i+j*m+k*m*n]-z; // dx,dy,dz in gridded flow field relative coordinates
 
@@ -36,7 +36,7 @@ void interp3(float* interp, // interpolated output
 				+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
 				+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
 				+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
-
+											//3-dim indexing of flattened array
 				+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2];
 			}
 		}
@@ -261,7 +261,7 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
 
 
 void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow field
-							float* u0,float* v0,float* w0, //gridded flow field
+							float* u0,float* v0,float* w0, //gridded flow field: x-disps, y-disps, z-disps
 							int m,int n,int o, //full size
 							int m2,int n2,int o2){ //gridded size
 

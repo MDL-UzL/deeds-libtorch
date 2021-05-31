@@ -14,8 +14,8 @@ void interp3xyz(float* datai,float* data,float* datax,float* datay,int len1,int 
             }
         }
     }
-    
-    
+
+
     //y-interp
     for(int k=0;k<len1;k++){
         for(int j=0;j<len2;j++){
@@ -28,7 +28,7 @@ void interp3xyz(float* datai,float* data,float* datax,float* datay,int len1,int 
             }
         }
     }
-    
+
     //z-interp
     for(int k=0;k<len2;k++){
         int k2=(k+1)/2;
@@ -38,7 +38,7 @@ void interp3xyz(float* datai,float* data,float* datax,float* datay,int len1,int 
                     datai[i+j*len2+k*len2*len2]=datay[i+j*len2+k2*len2*len2];
                 }
             }
-            
+
         }
         else{
             for(int j=0;j<len2;j++){
@@ -48,7 +48,7 @@ void interp3xyz(float* datai,float* data,float* datax,float* datay,int len1,int 
             }
         }
     }
-    
+
 }
 
 void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int len2){
@@ -67,8 +67,8 @@ void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int
             }
         }
     }
-    
-    
+
+
     //y-interp
     for(int k=0;k<len1;k++){
         for(int j=0;j<len2;j++){
@@ -81,7 +81,7 @@ void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int
             }
         }
     }
-    
+
     //z-interp
     for(int k=0;k<len2;k++){
         int k2=(k+1)/2;
@@ -91,7 +91,7 @@ void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int
                     datai[i+j*len2+k*len2*len2]=datay[i+j*len2+k2*len2*len2];
                 }
             }
-            
+
         }
         else{
             for(int j=0;j<len2;j++){
@@ -101,34 +101,34 @@ void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int
             }
         }
     }
-    
+
 }
 
 
 void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,int n,int o,int len2,int step1,int hw,float quant,float alpha,int randnum){
     cout<<"d"<<flush;
-    
+
     int len=hw*2+1;
     len2=pow(hw*2+1,3);
-    
+
     int sz=m*n*o;
     int m1=m/step1; int n1=n/step1; int o1=o/step1;
     int sz1=m1*n1*o1;
-    
+
     //cout<<"len2: "<<len2<<" sz1= "<<sz1<<"\n";
-    
-    
-    
+
+
+
     int quant2=quant;
-    
+
     //const int hw2=hw*quant2; == pad1
-    
+
     int pad1=quant2*hw; int pad2=pad1*2;
-    
+
     int mp=m+pad2; int np=n+pad2; int op=o+pad2;
     int szp=mp*np*op;
     unsigned long* data2p=new unsigned long[szp];
-    
+
     for(int k=0;k<op;k++){
         for(int j=0;j<np;j++){
             for(int i=0;i<mp;i++){
@@ -136,8 +136,8 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
             }
         }
     }
-    
-    
+
+
     int skipz=1; int skipx=1; int skipy=1;
     if(step1>4){
         if(randnum>0){
@@ -152,18 +152,18 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
     }
     if(step1==4&randnum>1)
     skipz=2;
-    
-    
+
+
     float maxsamp=ceil((float)step1/(float)skipx)*ceil((float)step1/(float)skipz)*ceil((float)step1/(float)skipy);
     //printf("randnum: %d, maxsamp: %d ",randnum,(int)maxsamp);
-    
-    
+
+
     float alphai=(float)step1/(alpha*(float)quant);
-    
+
     float alpha1=0.5*alphai/(float)(maxsamp);
-    
+
     //unsigned long buffer[1000];
-    
+
 #pragma omp parallel for
     for(int z=0;z<o1;z++){
         for(int x=0;x<n1;x++){
@@ -176,7 +176,7 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
                         }
                     }
                 }*/
-                
+
                 for(int l=0;l<len2;l++){
                     int out1=0;
                     int zs=l/(len*len); int xs=(l-zs*len*len)/len; int ys=l-zs*len*len-xs*len;
@@ -194,19 +194,19 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
                         }
                     }
                     results[(y+x*m1+z*m1*n1)*len2+l]=out1*alpha1;
-                    
+
                 }
-                
+
             }
         }
     }
-    
-    
+
+
     delete data2p;
-    
+
     return;
-    
-    
+
+
 }
 
 
@@ -215,13 +215,13 @@ void warpImageCL(float* warped,float* im1,float* im1b,float* u1,float* v1,float*
     int n=image_n;
     int o=image_o;
     int sz=m*n*o;
-    
+
     float ssd=0;
     float ssd0=0;
     float ssd2=0;
-    
+
     interp3(warped,im1,u1,v1,w1,m,n,o,m,n,o,true);
-    
+
     for(int i=0;i<m;i++){
         for(int j=0;j<n;j++){
             for(int k=0;k<o;k++){
@@ -230,15 +230,16 @@ void warpImageCL(float* warped,float* im1,float* im1b,float* u1,float* v1,float*
             }
         }
     }
-    
+
     ssd/=m*n*o;
     ssd0/=m*n*o;
     SSD0=ssd0;
     SSD1=ssd;
-    
+
 }
 
-void warpAffineS(short* warped,short* input,float* X,float* u1,float* v1,float* w1){
+void warpAffineS(short* warped,short* input,float* X,
+                 float* u1,float* v1,float* w1){ // flow field
     int m=image_m;
     int n=image_n;
     int o=image_o;
@@ -246,13 +247,16 @@ void warpAffineS(short* warped,short* input,float* X,float* u1,float* v1,float* 
     for(int k=0;k<o;k++){
         for(int j=0;j<n;j++){
             for(int i=0;i<m;i++){
-                
+                // affine transformation (every x + y + z) + flow field displacement -> get x,y,z for lookup in input image
                 float y1=(float)i*X[0]+(float)j*X[1]+(float)k*X[2]+(float)X[3]+v1[i+j*m+k*m*n];
                 float x1=(float)i*X[4]+(float)j*X[5]+(float)k*X[6]+(float)X[7]+u1[i+j*m+k*m*n];
                 float z1=(float)i*X[8]+(float)j*X[9]+(float)k*X[10]+(float)X[11]+w1[i+j*m+k*m*n];
+
+                //do not interpolate looked up values
                 int x=round(x1); int y=round(y1);  int z=round(z1);
-                
+
                 //if(y>=0&x>=0&z>=0&y<m&x<n&z<o){
+                    //lookup x,y,z and store to warped image
                     warped[i+j*m+k*m*n]=input[min(max(y,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n];
                 //}
                 //else{
@@ -261,30 +265,33 @@ void warpAffineS(short* warped,short* input,float* X,float* u1,float* v1,float* 
             }
         }
     }
-    
-    
+
+    // no distance metric here
+
 }
 void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float* v1,float* w1){
     int m=image_m;
     int n=image_n;
     int o=image_o;
     int sz=m*n*o;
-    
+
     float ssd=0;
     float ssd0=0;
     float ssd2=0;
-    
+
     for(int k=0;k<o;k++){
         for(int j=0;j<n;j++){
             for(int i=0;i<m;i++){
-                
+
                 float y1=(float)i*X[0]+(float)j*X[1]+(float)k*X[2]+(float)X[3]+v1[i+j*m+k*m*n];
                 float x1=(float)i*X[4]+(float)j*X[5]+(float)k*X[6]+(float)X[7]+u1[i+j*m+k*m*n];
                 float z1=(float)i*X[8]+(float)j*X[9]+(float)k*X[10]+(float)X[11]+w1[i+j*m+k*m*n];
+
+                //interpolate looked up values (see also interp3)
                 int x=floor(x1); int y=floor(y1);  int z=floor(z1);
                 float dx=x1-x; float dy=y1-y; float dz=z1-z;
-                
-                
+
+
                 warped[i+j*m+k*m*n]=(1.0-dx)*(1.0-dy)*(1.0-dz)*input[min(max(y,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]+
                 (1.0-dx)*dy*(1.0-dz)*input[min(max(y+1,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]+
                 dx*(1.0-dy)*(1.0-dz)*input[min(max(y,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z,0),o-1)*m*n]+
@@ -296,21 +303,21 @@ void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float*
             }
         }
     }
-    
+
     for(int i=0;i<m;i++){
         for(int j=0;j<n;j++){
             for(int k=0;k<o;k++){
+                //squared(intensity differences)
                 ssd+=pow(im1b[i+j*m+k*m*n]-warped[i+j*m+k*m*n],2);
                 ssd0+=pow(im1b[i+j*m+k*m*n]-input[i+j*m+k*m*n],2);
             }
         }
     }
-    
-    ssd/=m*n*o;
+
+    ssd/=m*n*o; // normalize with total size
     ssd0/=m*n*o;
     SSD0=ssd0;
     SSD1=ssd;
-    
-    
-}
 
+
+}
