@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "deeds-libtorch"
+version = "0.1.0"
+description = ""
+authors = ["Sreejith Kannath Kalam <sreejith.kannathkalam@student.uni-luebeck.de>", "Christian Weihsbach <christian.weihsbach@uni-luebeck.de>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+torch = "^1.9.1"
+torchvision = "^0.10.1"
+nibabel = "^3.2.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
