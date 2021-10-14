@@ -16,6 +16,7 @@ float dotprod(float* vector,float* vector2,int len){
 }
 
 void qrsolve(float* X,float* A,float* b,int len,int len2){
+    //qr solve for eigenvalues on diagonal X(vect) = lambda * vect = eigenvalues * vect
     //first column
     float* Q=new float[4*len];
     float r11=norm(A,len);
@@ -26,7 +27,7 @@ void qrsolve(float* X,float* A,float* b,int len,int len2){
     float r13=dotprod(Q,A+len*2,len);
     float r14=dotprod(Q,A+len*3,len);
     //printf("r11: %f, r12: %f, r13: %f, r14: %f\n",r11,r12,r13,r14);
-    
+
     //second column - misuse Q(:,2:4) for a2,a3,a4
     for(int i=0;i<len;i++){
         Q[i+len]=A[i+len]-Q[i]*r12;
@@ -40,7 +41,7 @@ void qrsolve(float* X,float* A,float* b,int len,int len2){
     float r23=dotprod(Q+len,A+len*2,len);
     float r24=dotprod(Q+len,A+len*3,len);
     //printf("r22: %f, r23: %f, r24: %f\n",r22,r23,r24);
-    
+
     //third column
     for(int i=0;i<len;i++){
         Q[i+len*2]=A[i+len*2]-Q[i]*r13-Q[i+len]*r23;
@@ -51,7 +52,7 @@ void qrsolve(float* X,float* A,float* b,int len,int len2){
         Q[i+len*2]=Q[i+len*2]/r33;
     }
     float r34=dotprod(Q+len*2,A+len*3,len);
-    
+
     //fourth column
     for(int i=0;i<len;i++){
         Q[i+len*3]=A[i+len*3]-Q[i]*r14-Q[i+len]*r24-Q[i+2*len]*r34;
@@ -70,10 +71,13 @@ void qrsolve(float* X,float* A,float* b,int len,int len2){
         float x3=(d3-r34*x4)/r33;
         float x2=(d2-r23*x3-r24*x4)/r22;
         float x1=(d1-r12*x2-r13*x3-r14*x4)/r11;
-        X[0+j*4]=x1; X[1+j*4]=x2; X[2+j*4]=x3; X[3+j*4]=x4;
+        X[0+j*4]=x1;
+        X[1+j*4]=x2;
+        X[2+j*4]=x3;
+        X[3+j*4]=x4;
         //printf("x1: %f, x2: %f, x3: %f, x4: %f\n",x1,x2,x3,x4);
     }
-    
+
 }
 
 void jacobiSVD3(float* A,float* U,float* V){
@@ -82,7 +86,7 @@ void jacobiSVD3(float* A,float* U,float* V){
         V[i]=0;
     }
     float T[3];
-    
+
     V[0]=1; V[4]=1; V[8]=1;
     for(int iter=0;iter<4;iter++){
         for(int j=1;j<3;j++){
@@ -108,24 +112,24 @@ void jacobiSVD3(float* A,float* U,float* V){
                 for(int k=0;k<3;k++){
                     V[k+j*3]=s*T[k]+c*V[k+j*3];
                 }
-				
+
             }
         }
     }
-    
+
     for(int j=0;j<3;j++){
         float singval=norm(U+j*3,3);
         for(int i=0;i<3;i++){
             U[i+j*3]/=singval;
         }
     }
-    
-	
-    
+
+
+
 }
 
 void findRigid(float* RT,float* pts1t,float* pts2t,int len){
-	
+
 	//if needed transpose
 	float* pts1=new float[len*4];
 	float* pts2=new float[len*4];
@@ -135,9 +139,9 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
 			pts2[i+k*4]=pts2t[k+i*len];
 		}
 	}
-	
-		
-	
+
+
+
 	float* pts1m=new float[3];
 	float* pts2m=new float[3];
 	for(int i=0;i<3;i++){
@@ -150,7 +154,7 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
 	for(int i=0;i<3;i++){
 		pts1m[i]/=(float)len; pts2m[i]/=(float)len;
 	}
-	
+
 	float* K=new float[9];
 	float* U=new float[9];
 	float* V=new float[9];
@@ -166,16 +170,16 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
 			}
 		}
 	}
-	
-	
+
+
     jacobiSVD3(K,U,V);
-    
+
     for(int i=0;i<16;i++){
         R[i]=0.0; RT[i]=0.0;
     }
     R[15]=1.0;
     RT[15]=1.0;
-    
+
     for(int k=0;k<3;k++){
         for(int i=0;i<3;i++){
             for(int j=0;j<3;j++){
@@ -189,12 +193,12 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
         pts2_4[0+i*4]=pts2[0+i*3]; pts2_4[1+i*4]=pts2[1+i*3];
         pts2_4[2+i*4]=pts2[2+i*3]; pts2_4[3+i*4]=1.0f;
     }*/
-    
+
     qrsolve(Rpts2,R,pts2,4,len);
-    
+
 	//    printf("Rpt: %f, %f, %f\n",Rpts2[0],Rpts2[len],Rpts2[2*len]);
-	
-    
+
+
     float* t1=new float[3];
 	t1[0]=0; t1[1]=0; t1[2]=0;
     for(int i=0;i<len;i++){
@@ -206,16 +210,16 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
         t1[i]=t1[i]/(float)len-pts1m[i];
     }
 	// printf("t1: %f, %f, %f\n",t1[0],t1[1],t1[2]);
-	
+
     float t0[3]={0,0,0};
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++){
             t0[i]+=R[i+j*4]*t1[j];
         }
     }
-    
+
 	// printf("t0: %f, %f, %f\n",t0[0],t0[1],t0[2]);
-    
+
     //transpose
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++){
@@ -223,25 +227,25 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
         }
         RT[3+i*4]=t0[i];
     }
-	
+
 	delete pts1;
 	delete pts2;
-    
+
    // delete pts2_4;
     delete Rpts2;
-	
+
 }
 
 
 
 void affineRobust(float* RT,float* pts1,float* pts2,int len){
-	
+
 	if(RIGID)
         findRigid(RT,pts1,pts2,len);
     else
         qrsolve(RT,pts1,pts2,len,4);
-	
-	
+
+
 	int lenh=len/2;
 	float* err=new float[len];
 	float* err2=new float[len];
@@ -253,10 +257,12 @@ void affineRobust(float* RT,float* pts1,float* pts2,int len){
 		pts1b[i+2*lenh]=1; pts2b[i+2*lenh]=1;
 		pts1b[i+3*lenh]=1; pts2b[i+3*lenh]=1;
 	}
-	
-	for(int iter=0;iter<15;iter++){
+
+	for(int iter=0;iter<15;iter++){ // for all 16 matrix elements
 		for(int l=0;l<len;l++){
-			float x=0; float y=0; float z=0;
+			float x=0;
+            float y=0;
+            float z=0;
 			for(int i=0;i<3;i++){
 				y+=pts1[l+i*len]*RT[i];
 				x+=pts1[l+i*len]*RT[i+4];
@@ -281,17 +287,11 @@ void affineRobust(float* RT,float* pts1,float* pts2,int len){
 				count++;
 			}
 		}
-        
+
         if(RIGID)
             findRigid(RT,pts1b,pts2b,lenh);
         else
             qrsolve(RT,pts1b,pts2b,lenh,4);
-        
-	
-        
-		
-		
-	}	
+	}
 	delete pts1b; delete pts2b; delete err; delete err2;
-	
 }

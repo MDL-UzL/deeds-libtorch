@@ -105,14 +105,19 @@ void interp3xyzB(float* datai,float* data,float* datax,float* datay,int len1,int
 }
 
 
-void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,int n,int o,int len2,int step1,int hw,float quant,float alpha,int randnum){
+void dataCostCL(
+    unsigned long* data,
+    unsigned long* data2,
+    float* results,
+    int m,int n,int o,int len2,int step1,int hw,float quant,float alpha,int randnum){
     cout<<"d"<<flush;
 
     int len=hw*2+1;
-    len2=pow(hw*2+1,3);
+    len2=pow(hw*2+1,3); //len2 is calculated again (see linearBCV.cpp)
+    //hw is search radius
 
-    int sz=m*n*o;
-    int m1=m/step1; int n1=n/step1; int o1=o/step1;
+    int sz=m*n*o; //full size
+    int m1=m/step1; int n1=n/step1; int o1=o/step1; //gridded cell size
     int sz1=m1*n1*o1;
 
     //cout<<"len2: "<<len2<<" sz1= "<<sz1<<"\n";
@@ -123,16 +128,22 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
 
     //const int hw2=hw*quant2; == pad1
 
-    int pad1=quant2*hw; int pad2=pad1*2;
+    int pad1=quant2*hw; //pad stop = quant * search_radius
+    int pad2=pad1*2; // uniform padding =  2*  quant * search_radius
 
-    int mp=m+pad2; int np=n+pad2; int op=o+pad2;
+    int mp=m+pad2;//m_padded - uniform padding for all x,y,z
+    int np=n+pad2;//n_padded
+    int op=o+pad2;//o_padded
     int szp=mp*np*op;
     unsigned long* data2p=new unsigned long[szp];
 
+    // apply padding quant * search_radius in all 8 directions
     for(int k=0;k<op;k++){
         for(int j=0;j<np;j++){
             for(int i=0;i<mp;i++){
-                data2p[i+j*mp+k*mp*np]=data2[max(min(i-pad1,m-1),0)+max(min(j-pad1,n-1),0)*m+max(min(k-pad1,o-1),0)*m*n];
+                data2p[i+j*mp+k*mp*np]=data2[max(min(i-pad1,m-1),0) // 0 to x_max_idx but with x offset (shift of half padding to center data)
+                                      +max(min(j-pad1,n-1),0)*m
+                                      +max(min(k-pad1,o-1),0)*m*n];
             }
         }
     }
@@ -141,34 +152,42 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
     int skipz=1; int skipx=1; int skipy=1;
     if(step1>4){
         if(randnum>0){
+            //true for linearBCV
             skipz=2; skipx=2;
         }
         if(randnum>1){
+            //wrong for linearBCV
             skipy=2;
         }
     }
     if(randnum>1&step1>7){
+        //wrong for linearBCV
         skipz=3; skipx=3; skipy=3;
     }
     if(step1==4&randnum>1)
+    //wrong for linearBCV
     skipz=2;
 
 
-    float maxsamp=ceil((float)step1/(float)skipx)*ceil((float)step1/(float)skipz)*ceil((float)step1/(float)skipy);
+    float maxsamp=ceil((float)step1/(float)skipx)
+                 *ceil((float)step1/(float)skipz)
+                 *ceil((float)step1/(float)skipy); //maxsamples per kernel microsteps in x,y,z (sparse)
     //printf("randnum: %d, maxsamp: %d ",randnum,(int)maxsamp);
 
 
-    float alphai=(float)step1/(alpha*(float)quant);
+    float alphai=(float)step1/(alpha*(float)quant); //linearBCV alpha=1
 
-    float alpha1=0.5*alphai/(float)(maxsamp);
+    float alpha1=0.5*alphai/(float)(maxsamp); //alpha1 = step/(alpha*quant)
 
     //unsigned long buffer[1000];
 
 #pragma omp parallel for
-    for(int z=0;z<o1;z++){
-        for(int x=0;x<n1;x++){
-            for(int y=0;y<m1;y++){
-                int z1=z*step1; int x1=x*step1; int y1=y*step1;
+    for(int z=0;z<o1;z++){ // iterate gridded z
+        for(int x=0;x<n1;x++){ // iterate gridded y
+            for(int y=0;y<m1;y++){ //iterate gridded x
+                int z1=z*step1;
+                int x1=x*step1;
+                int y1=y*step1; //some kind of scaling
                 /*for(int k=0;k<step1;k++){
                     for(int j=0;j<step1;j++){
                         for(int i=0;i<step1;i++){
@@ -177,26 +196,36 @@ void dataCostCL(unsigned long* data,unsigned long* data2,float* results,int m,in
                     }
                 }*/
 
-                for(int l=0;l<len2;l++){
-                    int out1=0;
-                    int zs=l/(len*len); int xs=(l-zs*len*len)/len; int ys=l-zs*len*len-xs*len;
-                    zs*=quant; xs*=quant; ys*=quant;
-                    int x2=xs+x1; int z2=zs+z1; int y2=ys+y1;
-                    for(int k=0;k<step1;k+=skipz){
+                for(int l=0;l<len2;l++){ //iterate over kernel_entries
+                    int out1=0; //will be summed up
+                    int zs=l/(len*len);
+                    int xs=(l-zs*len*len)/len;
+                    int ys=l-zs*len*len-xs*len;
+                    //get position in search kernel (ys increases faster than xs than zs)
+                    // (xs,ys,zs) is center of search kernel
+
+                    zs*=quant;
+                    xs*=quant;
+                    ys*=quant; //this is some kind of scaling
+
+                    int x2=xs+x1;
+                    int z2=zs+z1;
+                    int y2=ys+y1; // per (x1,z1,y1) we add relative search position (xs, zs, ys)
+                    for(int k=0;k<step1;k+=skipz){ //iterate steps, skip one, skip two etc. i.e. sparse microsteps
                         for(int j=0;j<step1;j+=skipx){
                             for(int i=0;i<step1;i+=skipy){
                                 //unsigned int t=buffer[i+j*STEP+k*STEP*STEP]^buf2p[i+j*mp+k*mp*np];
                                 //out1+=(wordbits[t&0xFFFF]+wordbits[t>>16]);
-                                unsigned long t1=data[i+y1+(j+x1)*m+(k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
-                                unsigned long t2=data2p[i+j*mp+k*mp*np+(y2+x2*mp+z2*mp*np)];
-                                out1+=__builtin_popcountll(t1^t2);
+                                unsigned long t1=data   [i+y1+  (j+x1)*m+   (k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
+                                unsigned long t2=data2p [i+      j*mp+      k*mp*np+    (y2 +x2*mp   +z2*mp*np)];//last term is search offset
+                                // t2=data2p            [i+y2   (j+x2)*mp+  (k+z2)*mp*np]; // y2,x2,z2 contain search offset
+                                out1+=__builtin_popcountll(t1^t2); //bitwise xor -> are mind features either both1 or both zero? count ones in bitstream
                             }
                         }
                     }
-                    results[(y+x*m1+z*m1*n1)*len2+l]=out1*alpha1;
-
+                    results[(y+x*m1+z*m1*n1)*len2+l]=out1*alpha1; // divide by samplecount of microsteps
+                    //for every x,y,z and every kernel_element (4-dim)
                 }
-
             }
         }
     }

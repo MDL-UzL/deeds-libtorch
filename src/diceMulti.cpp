@@ -15,47 +15,47 @@ using namespace std;
 
 
 int main(int argc,char * const argv[]){
-    
+
     if(argc<3){
         cout<<"Not enough input arguments. Example syntax:\n";
         cout<<"./diceMulti seg1.nii seg2.nii\n";
         exit(1);
     }
-    
+
     string filein1=argv[1];
     string filein2=argv[2];
-    
+
     char* header=new char[352];
     short* segment1;
     int m,n,o,p; //dimensions of image (will be set be readNifti)
     readNifti(filein1,segment1,header,m,n,o,p); //load segmentation1
     short* segment2;
     readNifti(filein2,segment2,header,m,n,o,p); //load segmentation2
-    
+
     int sz=m*n*o;
-    
+
     vector<float> dice1;
 
     bool* countvol=new bool[sz];
-    
+
     vector<short> found_label(segment1,segment1+sz);
     sort(found_label.begin(),found_label.end());
     found_label.erase(unique(found_label.begin(),found_label.end()),found_label.end());
-    
+
     int maxlabel=*max_element(segment1,segment1+sz);
     for(int i=1;i<found_label.size();i++){ //for all labels except background
         int label=found_label[i];
         for(int i=0;i<sz;i++)
             countvol[i]=segment1[i]==label&segment2[i]==label;
-        float unionval=count(countvol,countvol+sz,true);
+        float unionval=count(countvol,countvol+sz,true); //true positives
         for(int i=0;i<sz;i++)
             countvol[i]=segment1[i]==label;
-        float card1=count(countvol,countvol+sz,true);
+        float card1=count(countvol,countvol+sz,true);//all positives predicted (may incorporate fp)
         for(int i=0;i<sz;i++)
             countvol[i]=segment2[i]==label;
-        float card2=count(countvol,countvol+sz,true);
+        float card2=count(countvol,countvol+sz,true);//ground truth positive count
         dice1.push_back(2.0f*unionval/(card1+card2));
-        
+
     }
 
     cout<<"Dice (for each label): ";
@@ -63,7 +63,7 @@ int main(int argc,char * const argv[]){
         printf(" %4.3f, ",dice1[i]);
     }
     float meandice=accumulate(dice1.begin(),dice1.end(),0.0f)/dice1.size();
-    
+
     printf("\nAVERAGE DICE: %f\n",meandice);
     /*if(argc>3){
         ofstream outfile;
@@ -77,4 +77,3 @@ int main(int argc,char * const argv[]){
     delete countvol;
     return 0;
 }
-
