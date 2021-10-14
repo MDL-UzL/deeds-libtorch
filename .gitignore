@@ -1,5 +1,9 @@
-build
+# Build directory
+build/*
 
 # libtorch files and folders
-libtorch
-libtorch-macos-1.8.1.zip
+lib/libtorch/*
+!libtorch/README.md
+
+# System files
+.DS_Store
