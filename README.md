@@ -2,9 +2,16 @@
 Source deedsBCV see https://github.com/mattiaspaul/deedsBCV
 
 # Installation
-1. Install cmake
-1. Install zlib
+1. Install ITKsnap: http://www.itksnap.org/pmwiki/pmwiki.php
+1.1 Export the application binary path to in your .zshrc or .bashrc to have access to the "c3d" tool (http://www.itksnap.org/pmwiki/pmwiki.php?n=Convert3D.Convert3D) by using `export PATH="/Applications/ITK-SNAP.app/Contents/bin:$PATH"`
+
+1. Install your favorite editor (my recommendation is: VSCode) for x86_64. In case you are using M1 powered MacBook you can optionally install an arm toolchain.
+1. Install homebrew package manager for x86_64 and arm (see https://soffes.blog/homebrew-on-apple-silicon)
+1. brew install cmake
+1. brew install zlib
+1. brew install libomp
 1. Install miniconda or conda for your python environments
+1.1 brew install --cask miniconda
 
 ## Install python environment
 Create a new conda env and run
@@ -47,3 +54,7 @@ Run by using:
 `python ./deeds_libtorch/applyBCV.py`
 
 This is the first entry point for development. You can extend this interface for development or debugging.
+
+# Data
+Development test data can be found in
+``
