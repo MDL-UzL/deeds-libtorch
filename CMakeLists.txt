@@ -7,31 +7,68 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 find_package(Torch REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(OpenMP REQUIRED)
 
-# Define our library target
-add_library(libtorch-applyBCV SHARED src/applyBCV.cpp)
-# Enable C++14
-target_compile_features(libtorch-applyBCV PRIVATE cxx_std_14)
-# Link against LibTorch
-target_link_libraries(libtorch-applyBCV "${TORCH_LIBRARIES}")
-# Link against ZLIB
-target_link_libraries(libtorch-applyBCV ZLIB::ZLIB)
+SET(CMAKE_CXX_FLAGS "-O3 -mavx2 -msse4.2")
 
-# Build original binaries
-add_executable(deedsBCV src/deedsBCV0.cpp)
-target_compile_features(deedsBCV PRIVATE cxx_std_14)
-target_link_libraries(deedsBCV ZLIB::ZLIB)
+# Define executable targets
+set(executables_list
+    linearBCV
+    deedsBCV
+    applyBCV
+    applyBCVfloat
+)
 
-add_executable(linearBCV src/linearBCV.cpp)
-target_compile_features(linearBCV PRIVATE cxx_std_14)
-target_link_libraries(linearBCV ZLIB::ZLIB)
+set(executables_src_list
+    src/linearBCV.cpp
+    src/deedsBCV0.cpp
+    src/applyBCV.cpp
+    src/applyBCVfloat.cpp
+)
 
-add_executable(applyBCV src/applyBCV.cpp)
-target_compile_features(applyBCV PRIVATE cxx_std_14)
-target_link_libraries(applyBCV ZLIB::ZLIB)
-target_link_libraries(applyBCV "${TORCH_LIBRARIES}")
+list(LENGTH executables_list len_executables)
+math(EXPR executables_max_idx "${len_executables} - 1")
 
-add_executable(applyBCVfloat src/applyBCVfloat.cpp)
-target_compile_features(applyBCVfloat PRIVATE cxx_std_14)
-target_link_libraries(applyBCVfloat ZLIB::ZLIB)
-target_link_libraries(applyBCVfloat "${TORCH_LIBRARIES}")
+foreach(idx RANGE ${executables_max_idx})
+    list(GET executables_list ${idx} target_name)
+    list(GET executables_src_list ${idx} source_file)
+    message(STATUS "Adding executable target ${target_name}  ${source_file}")
+
+    add_executable(${target_name} ${source_file})
+    target_compile_features(${target_name} PRIVATE cxx_std_14)
+    # Link against LibTorch
+    target_link_libraries(${target_name} "${TORCH_LIBRARIES}")
+    # Link against ZLIB
+    target_link_libraries(${target_name} ZLIB::ZLIB)
+    # Link agains libomp
+    target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
+
+endforeach()
+
+# Define library targets
+set(libraries_list
+    libtorch-applyBCV
+)
+
+set(libraries_src_list
+    src/applyBCV.cpp
+)
+
+list(LENGTH libraries_list len_libs)
+math(EXPR libs_max_idx "${len_libs} - 1")
+
+foreach(idx RANGE ${libs_max_idx})
+    list(GET libraries_list ${idx} target_name)
+    list(GET libraries_src_list ${idx} source_file)
+    message(STATUS "Adding library target ${target_name}  ${source_file}")
+
+    add_library(${target_name} SHARED ${source_file})
+    target_compile_features(${target_name} PRIVATE cxx_std_14)
+    # Link against LibTorch
+    target_link_libraries(${target_name} "${TORCH_LIBRARIES}")
+    # Link against ZLIB
+    target_link_libraries(${target_name} ZLIB::ZLIB)
+    # Link agains libomp
+    target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
+
+endforeach()
