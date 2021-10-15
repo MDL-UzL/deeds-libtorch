@@ -92,8 +92,8 @@ void volfilter(float* imagein,int m,int n,int o,int length,float sigma){
 	filter1(imagein,image1,m,n,o,filter,length,2);
 	filter1(image1,imagein,m,n,o,filter,length,3);
 
-	delete image1;
-	delete filter;
+	delete[] image1;
+	delete[] filter;
 
 }
 
@@ -184,18 +184,18 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 	cout<<"std(J)="<<round(jstd*100)/100.0;
 	//cout<<"Range: ["<<Jmin<<", "<<Jmax<<"]round(jmean*100)/100.0<<
     cout<<" (J<0)="<<round(frac*1e7)/100.0<<"e-7  ";
-	delete []Jac;
+	delete[] Jac;
 
 
-	delete []J11;
-	delete []J12;
-	delete []J13;
-	delete []J21;
-	delete []J22;
-	delete []J23;
-	delete []J31;
-	delete []J32;
-	delete []J33;
+	delete[] J11;
+	delete[] J12;
+	delete[] J13;
+	delete[] J21;
+	delete[] J22;
+	delete[] J23;
+	delete[] J31;
+	delete[] J32;
+	delete[] J33;
 
 	return jstd;
 
@@ -255,8 +255,8 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
     }
 
 
-    delete us; delete vs; delete ws;
-    delete us2; delete vs2; delete ws2;
+    delete[] us; delete[] vs; delete[] ws;
+    delete[] us2; delete[] vs2; delete[] ws2;
 }
 
 
@@ -287,9 +287,9 @@ void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow fiel
     interp3(v1,v0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate y dir, v1 is returned
     interp3(w1,w0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate z dir, w1 is returned
 
-    delete []x1;
-    delete []y1;
-    delete []z1;
+    delete[] x1;
+    delete[] y1;
+    delete[] z1;
 
     //for(int i=0;i<m2*n2*o2;i++){
     //	u2[i]*=scale_n;

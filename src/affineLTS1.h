@@ -227,10 +227,10 @@ void estimateAffine2(float* X,float* Xprev,float* im1,float* im2,float* costall,
     matmult(X1,Xprev,X); // X is returned
 
 
-    delete minval; delete minval2;
-    delete minind; delete minind2;
-    delete pts1; delete pts2;
-    delete xs; delete ys; delete zs;
+    delete[] minval; delete[] minval2;
+    delete[] minind; delete[] minind2;
+    delete[] pts1; delete[] pts2;
+    delete[] xs; delete[] ys; delete[] zs;
 
 
    // estimateAffine(X,Xprev,costall,validind,costall2,validind2,step1,quant1,hw1);

@@ -95,7 +95,7 @@ void readNifti(string filestr,Type*& vol,char*& header,int& m,int& n,int& o,int&
             printf("Datatype %d not supported. Exiting.\n",datatype[0]);
             exit(1);
     }
-    delete filecharptr;
+    delete[] filecharptr;
 
     //gzread(file,vol,sz*sizeof(Type));
     //vol=reinterpret_cast<Type*>(vol);
@@ -217,7 +217,7 @@ void gzWriteNifti(string filestr,float* data,char* header,int m,int n,int o,int 
     int err=gzwrite(file2,(unsigned char*)out2,size);
     gzclose(file2);
 
-    delete out2; delete header2;
+    delete[] out2; delete[] header2;
 }
 
 void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,int p){
@@ -248,7 +248,7 @@ void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,in
     copy(header2,header2+352,out2);
     char* datachar=reinterpret_cast<char*>(data);
     copy(datachar,datachar+sz*sizeof(short),out2+352);
-    
+
     //write gzipped file
     gzFile file2=gzopen(filename,"wb");
     if(!file2){
@@ -258,7 +258,7 @@ void gzWriteSegment(string filestr,short* data,char* header,int m,int n,int o,in
     int err=gzwrite(file2,(unsigned char*)out2,size);
     gzclose(file2);
 
-    delete out2; delete header2;
+    delete[] out2; delete[] header2;
 
 }
 
@@ -293,7 +293,7 @@ vector<TypeF> readFile(string filestr){
         for(int i=0;i<length;i++){
             invalues.push_back(floatptr[i]);
         }
-        delete charptr;
+        delete[] charptr;
     }
     else{
         cout<<"readFile error. Did not find "<<filestr<<"\n";

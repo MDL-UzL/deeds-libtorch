@@ -1,7 +1,7 @@
 /* Image-driven minimum-spanning-tree calcuation using Prim's algorithm.
  Average run-time should be of n*log(n) complexity.
  Uses heap data structure to speed-up finding the next lowest edge-weight.
- Edge-weights 
+ Edge-weights
 */
 
 class Edge
@@ -26,7 +26,7 @@ bool Edge::operator<(const Edge & b) const{
 }
 
 int newEdge(Edge edge1,Edge& edgeout,bool* vertices){
-	bool new1=vertices[edge1.vert1]; 
+	bool new1=vertices[edge1.vert1];
 	bool new2=vertices[edge1.vert2];
 	int out1;
 	if(new1^new2){
@@ -51,22 +51,22 @@ float edgecost2weight(float val,float meanim){
 
 void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,int m2,int n2,int o2){
 
-	
+
 	int m=m2/step1;
 	int n=n2/step1;
 	int o=o2/step1;
-	
+
 	int num_vertices=m*n*o; int sz=num_vertices;
 	int len=m*n*o;
 	timeval time1,time2;
 	int num_neighbours=6;
-	float* edgecost=new float[num_vertices*num_neighbours]; 
+	float* edgecost=new float[num_vertices*num_neighbours];
 	int* index_neighbours=new int[num_vertices*num_neighbours];
 	for(int i=0;i<num_vertices*num_neighbours;i++){
 		edgecost[i]=0.0;
 		index_neighbours[i]=-1;
 	}
-	
+
 	int dx[6]={-1,1,0,0,0,0};
 	int dy[6]={0,0,-1,1,0,0};
 	int dz[6]={0,0,0,0,-1,1};
@@ -108,20 +108,20 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
         stdim+=pow(im1[i]-meanim,2);
     }
     stdim=sqrt(stdim/(float)(m2*n2*o2));
-    
+
     for(int i=0;i<sz*6;i++){
         edgecost[i]/=(float)pow(step1,3);
     }
     for(int i=0;i<sz*6;i++){
         edgecost[i]=-edgecost2weight(edgecost[i],2.0f*stdim);
     }
-	
+
 	float centrex=n/2;
 	float centrey=m/2;
 	float centrez=o/2;
-	
+
 	int root=m/2+n/2*m+o/2*m*n;
-	
+
 	vector<Edge> priority;
 	bool* vertices=new bool[num_vertices];
 	int* level=new int[num_vertices];
@@ -137,7 +137,7 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
 	Edge minedge=Edge(0.0,-1,-1);
 	float cost=0.0;
 	gettimeofday(&time1, NULL);
-	
+
 	for(int i=0;i<num_vertices-1;i++){ //run n-1 times to have all vertices added
 		//add edges of new vertex to priority queue
 		for(int j=0;j<num_neighbours;j++){
@@ -162,7 +162,7 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
 		level[edgeout.vert2]=level[edgeout.vert1]+1;
 		parents[edgeout.vert2]=edgeout.vert1;
 	}
-	
+
 	//find correct ordering in constant time
 	int maxlevel=0;
 	for(int i=0;i<num_vertices;i++){
@@ -189,7 +189,7 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
 		ordered[num]=i;
 	}
 
-    
+
 	gettimeofday(&time2, NULL);
 	double timeAll=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
     nth_element(levelcount,levelcount+maxlevel/2,levelcount+maxlevel);
@@ -210,17 +210,14 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
         }
     }
 	priority.clear();
-	
-	delete edgecost;
-	delete index_neighbours;
-	delete levelcount;
-	delete leveloffset;
-	delete vertices;
-	delete level;
-	
-	
-	
+
+	delete[] edgecost;
+	delete[] index_neighbours;
+	delete[] levelcount;
+	delete[] leveloffset;
+	delete[] vertices;
+	delete[] level;
+
+
+
 }
-
-
-

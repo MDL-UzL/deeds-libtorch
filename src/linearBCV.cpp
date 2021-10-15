@@ -42,7 +42,7 @@ float quantile(float* values,int length,float quant1){
     //printf("quantind: %d/%d\n",quantind,length);
     nth_element(values2,values2+quantind,values2+length);
     float med1=values2[quantind];
-    // delete values2;
+    // delete[] values2;
     return med1;
 }
 bool RIGID=false;
@@ -291,11 +291,11 @@ int main (int argc, char * const argv[]) {
 
         timeDataSmooth+=(timeSmooth+timeData+timeMIND+timeTrans);
 
-        delete costall; delete costall2;
+        delete[] costall; delete[] costall2;
 
 	}
-    delete im1_mind;
-    delete im1b_mind;
+    delete[] im1_mind;
+    delete[] im1b_mind;
 	//==========================================================================================
 	//==========================================================================================
 

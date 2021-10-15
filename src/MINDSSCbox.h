@@ -127,7 +127,7 @@ void distances(float* im1,float* d1,int m,int n,int o,int qs,int l){
         d1[i+l*sz1]=w1[i];
     }
 
-    delete temp1; delete temp2; delete w1;
+    delete[] temp1; delete[] temp2; delete[] w1;
 }
 
 //__builtin_popcountll(left[i]^right[i]); absolute hamming distances
@@ -241,7 +241,7 @@ void descriptor(uint64_t* mindq,float* im1,
 
     gettimeofday(&time2, NULL);
     float timeMIND2=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
-    delete d1;
+    delete[] d1;
 
 
 }

@@ -231,7 +231,7 @@ void dataCostCL(
     }
 
 
-    delete data2p;
+    delete[] data2p;
 
     return;
 
