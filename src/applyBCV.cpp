@@ -15,7 +15,11 @@
 #include "zlib.h"
 #include <sys/stat.h>
 
-#include <torch/script.h>
+#ifdef TORCH_EXTENSION_NAME
+    #include <torch/extension.h>
+#else
+    #include <torch/script.h>
+#endif
 
 using namespace std;
 
@@ -227,6 +231,13 @@ int64_t applyBCV_main(int64_t _argc, std::vector<std::string> _argv) {
     return main(_argc, const_cast<char* const *>(argv.data()));
 }
 
-TORCH_LIBRARY(deeds_applyBCV, m) {
-  m.def("applyBCV_main", applyBCV_main);
-}
+
+#ifdef TORCH_EXTENSION_NAME
+    PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+        m.def("applyBCV_main", &applyBCV_main, "applyBCV_main");
+    }
+#else
+    TORCH_LIBRARY(deeds_applyBCV, m) {
+        m.def("applyBCV_main", &applyBCV_main);
+    }
+#endif

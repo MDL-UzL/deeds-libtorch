@@ -9,6 +9,7 @@ python = "^3.9"
 torch = "^1.9.1"
 torchvision = "^0.10.1"
 nibabel = "^3.2.1"
+ninja = "^1.10.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
