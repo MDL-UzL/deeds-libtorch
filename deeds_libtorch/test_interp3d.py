@@ -14,4 +14,4 @@ print(_output)
 _output_cpp = your_exposed_function(_input, ...)
 
 _output_torch == _output_cpp
-assert torch.isclose(_output_torch, _output_cpp, rtol=1e-05, atol=1e-08, equal_nan=False), "Tensors do not match"
+assert torch.allclose(_output_torch, _output_cpp, rtol=1e-05, atol=1e-08, equal_nan=False), "Tensors do not match"
