@@ -234,22 +234,23 @@ int64_t applyBCV_main(int64_t _argc, std::vector<std::string> _argv) {
 torch::Tensor applyBCV_jacobian(
     torch::Tensor input_u,
     torch::Tensor input_v,
-    torch::Tensor input_w, int factor) {
+    torch::Tensor input_w,
+    torch::Tensor input_factor) {
 
     float* u = input_u.data_ptr<float>();
     float* v = input_v.data_ptr<float>();
     float* w = input_w.data_ptr<float>();
+    int* factor = input_factor.data_ptr<int>();
 
     int m = input_u.size(0);
     int n = input_u.size(1);
     int o = input_u.size(2);
 
+    float jacobian_output = jacobian(u, v, w, m, n, o, *factor);
+    std::vector<float> jac_vect{jacobian_output};
+
     auto options = torch::TensorOptions();
-    float jacobian_output = jacobian(u, v, w, m, n, o, factor);
-
-    float jac[1] = {jacobian_output};
-
-    return torch::from_blob(jac, {1}, options);
+    return torch::from_blob(jac_vect.data(), {1}, options).clone();
 }
 
 

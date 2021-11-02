@@ -5,11 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: test_transformations.py",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
+            "program": "/Users/christianweihsbach/code/deeds-libtorch/deeds_libtorch/test_transformations.py",
+            "console": "integratedTerminal",
+            "env": {
+                "USE_JIT_COMPILE": "1"
+              },
+            "justMyCode": true
         }
     ]
 }

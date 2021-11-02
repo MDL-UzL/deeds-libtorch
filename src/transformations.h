@@ -45,7 +45,9 @@ void interp3(float* interp, // interpolated output
 
 
 
-void filter1(float* imagein,float* imageout,int m,int n,int o,float* filter,int length,int dim){
+void filter1(float* imagein,float* imageout,int m,int n,int o,float* filter,
+	int length,int dim){
+
 	int i,j,k,f;
 	int i1,j1,k1;
 	int hw=(length-1)/2;
@@ -72,6 +74,7 @@ void filter1(float* imagein,float* imageout,int m,int n,int o,float* filter,int 
 }
 
 void volfilter(float* imagein,int m,int n,int o,int length,float sigma){
+	// gaussian filter
 
 	int hw=(length-1)/2;
 	int i,j,f;
@@ -133,7 +136,7 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 	float neg=0; float Jmin=1; float Jmax=1; float J;
 	float count=0; float frac;
 
-	filter1(u1,J11,m,n,o,grad,3,2);
+	filter1(u1,J11,m,n,o,grad,3,2); // filter length always stays 3, direction of filter is changed 3 times per u1, v1, w1
 	filter1(u1,J12,m,n,o,grad,3,1);
 	filter1(u1,J13,m,n,o,grad,3,3);
 
@@ -163,7 +166,11 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 		J33[i]+=1.0;
 	}
 	for(i=0;i<(m*n*o);i++){
-		J=J11[i]*(J22[i]*J33[i]-J23[i]*J32[i])-J21[i]*(J12[i]*J33[i]-J13[i]*J32[i])+J31[i]*(J12[i]*J23[i]-J13[i]*J22[i]);
+		J=
+		J11[i]*(J22[i]*J33[i]-J23[i]*J32[i])
+		-J21[i]*(J12[i]*J33[i]-J13[i]*J32[i])
+		+J31[i]*(J12[i]*J23[i]-J13[i]*J22[i]);
+		
 		jmean+=J;
 		if(J>Jmax)
 			Jmax=J;

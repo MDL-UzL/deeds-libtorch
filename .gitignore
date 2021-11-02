@@ -1,5 +1,6 @@
 # Build directory
 build/*
+build-jit/*
 
 # libtorch files and folders
 lib/libtorch/*
