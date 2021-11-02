@@ -231,13 +231,38 @@ int64_t applyBCV_main(int64_t _argc, std::vector<std::string> _argv) {
     return main(_argc, const_cast<char* const *>(argv.data()));
 }
 
+torch::Tensor applyBCV_jacobian(
+    torch::Tensor input_u,
+    torch::Tensor input_v,
+    torch::Tensor input_w, int factor) {
+
+    float* u = input_u.data_ptr<float>();
+    float* v = input_v.data_ptr<float>();
+    float* w = input_w.data_ptr<float>();
+
+    int m = input_u.size(0);
+    int n = input_u.size(1);
+    int o = input_u.size(2);
+
+    auto options = torch::TensorOptions();
+    float jacobian_output = jacobian(u, v, w, m, n, o, factor);
+
+    float jac[1] = {jacobian_output};
+
+    return torch::from_blob(jac, {1}, options);
+}
+
+
 
 #ifdef TORCH_EXTENSION_NAME
     PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         m.def("applyBCV_main", &applyBCV_main, "applyBCV_main");
+        m.def("applyBCV_jacobian", &applyBCV_jacobian, "applyBCV_jacobian");
     }
+
 #else
     TORCH_LIBRARY(deeds_applyBCV, m) {
         m.def("applyBCV_main", &applyBCV_main);
+        m.def("applyBCV_jacobian", &applyBCV_jacobian);
     }
 #endif
