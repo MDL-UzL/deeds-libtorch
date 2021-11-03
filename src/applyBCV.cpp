@@ -242,9 +242,13 @@ torch::Tensor applyBCV_jacobian(
     float* w = input_w.data_ptr<float>();
     int* factor = input_factor.data_ptr<int>();
 
-    int m = input_u.size(0);
+    int m = input_u.size(2);
     int n = input_u.size(1);
-    int o = input_u.size(2);
+    int o = input_u.size(0);
+
+    // cout<<"m"<<m;
+    // cout<<"n"<<n;
+    // cout<<"o"<<o;
 
     float jacobian_output = jacobian(u, v, w, m, n, o, *factor);
     std::vector<float> jac_vect{jacobian_output};
