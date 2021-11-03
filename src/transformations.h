@@ -139,7 +139,9 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 	filter1(u1,J11,m,n,o,grad,3,2); // filter length always stays 3, direction of filter is changed 3 times per u1, v1, w1
 	filter1(u1,J12,m,n,o,grad,3,1);
 	filter1(u1,J13,m,n,o,grad,3,3);
-
+	cout<<"u1\n";
+	for (int i = 0; i < m*n*o; i++)
+    	cout << u1[i] << " ";
 	filter1(v1,J21,m,n,o,grad,3,2);
 	filter1(v1,J22,m,n,o,grad,3,1);
 	filter1(v1,J23,m,n,o,grad,3,3);
@@ -147,7 +149,15 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 	filter1(w1,J31,m,n,o,grad,3,2);
 	filter1(w1,J32,m,n,o,grad,3,1);
 	filter1(w1,J33,m,n,o,grad,3,3);
-
+	cout<<"\nj11\n";
+	for (int i = 0; i < m*n*o; i++)
+    	cout << J11[i] << " ";
+	cout<<"\nj12\n";
+	for (int i = 0; i < m*n*o; i++)
+    	cout << J12[i] << " ";
+	cout<<"\nj13\n";
+	for (int i = 0; i < m*n*o; i++)
+    	cout << J13[i] << " ";
 	for(i=0;i<(m*n*o);i++){
 		J11[i]*=factor1;
 		J12[i]*=factor1;
@@ -188,7 +198,8 @@ float jacobian(float* u1,float* v1,float* w1,int m,int n,int o,int factor){
 	jstd/=(m*n*o-1);
 	jstd=sqrt(jstd);
 	frac=neg/count;
-	cout<<"std(J)="<<round(jstd*100)/100.0;
+	cout<<"mean(J)="<<jmean;
+	cout<<"std(J)="<<jstd;
 	//cout<<"Range: ["<<Jmin<<", "<<Jmax<<"]round(jmean*100)/100.0<<
     cout<<" (J<0)="<<round(frac*1e7)/100.0<<"e-7  ";
 	delete[] Jac;
