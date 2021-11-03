@@ -6,61 +6,25 @@ from torch.utils.cpp_extension import load
 if __name__ == '__main__':
 
     factor = 1
-    # input_u[0,0,0] = 2
 
-    # input_v, input_w = input_u, input_u
+    D, H, W =  4, 4, 6   # For deeds D or W or H must not be <=3 - it will result in a wrong std(det(jacobian))
 
-    # _output_torch = torch.autograd.functional.jacobian(
-    #     func, inputs, create_graph=False, strict=False, vectorize=False)
-
-    # Expose interpolate3d function of transformation.h
-
-    D, H, W = 3, 2, 1
-
-    DELTA_W = +1.
-    DELTA_H = +1.
+    DELTA_W = +6.
+    DELTA_H = +2.
     DELTA_D = +.5
 
     u_disp_field = torch.zeros(1,D,H,W,1)
     v_disp_field = torch.zeros(1,D,H,W,1)
     w_disp_field = torch.zeros(1,D,H,W,1)
 
-    u_disp_field[0,:,1,:,0] = -2.0*(DELTA_W/W) # u displacement
+    u_disp_field[0,0,0,0,0] = -2.0*(DELTA_W/W) # u displacement
+    u_disp_field[0,1,1,1,0] = -2.0*(DELTA_W/W) # u displacement
+    # u_disp_field[0,2,2,2,0] = -2.0*(DELTA_W/W) # u displacement, comment this line to provoke error
     # v_disp_field[0,:,:,:,0] = -2.0*(DELTA_H/H) # v displacement
     # w_disp_field[0,:,:,:,0] = -2.0*(DELTA_D/D) # w displacement
 
     disp_field = torch.cat([u_disp_field, v_disp_field, w_disp_field], dim=-1)
     disp_field = disp_field.reshape(D,H,W,3)
-
-    # def apply_displacement(_input, disp_field):
-    #     _input = torch.rand(1,1,D,H,W)
-
-    #     # disp_field_only_u = torch.zeros(1,D,H,W,3)
-    #     # disp_field_only_u[:,:,:,:,0:1] = u_disp_field
-
-    #     # disp_field_only_v = torch.zeros(1,D,H,W,3)
-    #     # disp_field_only_v[:,:,:,:,1:2] = v_disp_field
-
-    #     # disp_field_only_w = torch.zeros(1,D,H,W,3)
-    #     # disp_field_only_w[:,:,:,:,2:3] = w_disp_field
-
-    #     affine = torch.eye(3,4)
-    #     affine = affine.unsqueeze(0)
-
-    #     id_grid = torch.nn.functional.affine_grid(affine, size=(1, 1, D, H, W), align_corners=False)
-    #     displaced = torch.nn.functional.grid_sample(_input, id_grid + disp_field.reshape(1,D,H,W,3), mode='bilinear')
-    #     displaced = displaced.reshape(D,H,W)
-
-    #     # displaced = (
-    #     #     torch.nn.functional.grid_sample(_input, id_grid + disp_field_only_u, mode='bilinear'),
-    #     #     torch.nn.functional.grid_sample(_input, id_grid + disp_field_only_v, mode='bilinear'),
-    #     #     torch.nn.functional.grid_sample(_input, id_grid + disp_field_only_w, mode='bilinear')
-    #     # )
-
-    #     print("input\n", _input)
-    #     print("output\n", displaced)
-    #     return displaced.reshape(D,H,W)
-
 
     def jacobian(u_disp, v_disp, w_disp):
 
@@ -70,14 +34,31 @@ if __name__ == '__main__':
         Z_WEIGHTS = WEIGHTS.view(1, 3, 1, 1).repeat(1, 1, 1, 1, 1)
 
         def get_J_row_entries(disp):
-            disp_field_envelope_x = torch.cat([disp[:,:,:,0:1,:], disp, disp[:,:,:,-1:,:]], dim=3)
-            d_disp_over_dx = torch.nn.functional.conv3d(disp_field_envelope_x.reshape(1,1,D,H,W+2), X_WEIGHTS)
+            disp_field_envelope_x = torch.cat(
+                [
+                    disp[:,:,:,0:1,:],
+                    disp,
+                    disp[:,:,:,-1:,:]
+                ],
+                dim=3)
+            d_disp_over_dx = torch.nn.functional.conv3d(disp_field_envelope_x.reshape(1,1,D,H,W+2), X_WEIGHTS).reshape(D,H,W)
 
-            disp_field_envelope_y = torch.cat([disp[:,:,0:1,:,:], disp, disp[:,:,-1:,:,:]], dim=2)
-            d_disp_over_dy = torch.nn.functional.conv3d(disp_field_envelope_y.reshape(1,1,D,H+2,W), Y_WEIGHTS)
+            disp_field_envelope_y = torch.cat(
+                [
+                    disp[:,:,0:1,:,:],
+                    disp,
+                    disp[:,:,-1:,:,:]],
+                dim=2)
+            d_disp_over_dy = torch.nn.functional.conv3d(disp_field_envelope_y.reshape(1,1,D,H+2,W), Y_WEIGHTS).reshape(D,H,W)
 
-            disp_field_envelope_z = torch.cat([disp[:,0:1,:,:,:], disp, disp[:,-1:,:,:,:]], dim=1)
-            d_disp_over_dz = torch.nn.functional.conv3d(disp_field_envelope_z.reshape(1,1,D+2,H,W), Z_WEIGHTS)
+            disp_field_envelope_z = torch.cat(
+                [
+                    disp[:,0:1,:,:,:],
+                    disp,
+                    disp[:,-1:,:,:,:]
+                ],
+                dim=1)
+            d_disp_over_dz = torch.nn.functional.conv3d(disp_field_envelope_z.reshape(1,1,D+2,H,W), Z_WEIGHTS).reshape(D,H,W)
 
             return (d_disp_over_dx, d_disp_over_dy, d_disp_over_dz)
 
@@ -88,12 +69,13 @@ if __name__ == '__main__':
         return torch.stack([J11, J12, J13, J21, J22, J23, J31, J32, J33]).reshape(3, 3, D, H, W)
 
     jac_out  = 1/factor*jacobian(u_disp_field, v_disp_field, w_disp_field)
+
     jac_out[0,0]+=1
     jac_out[1,1]+=1
     jac_out[2,2]+=1
 
-    J = torch.det(jac_out.reshape(-1,3,3))
-    print("mean", J.mean(), "std", J.std())
+    J = torch.det(jac_out.reshape(3,3,-1).permute(2,0,1))
+    print(f"mean(J)={J.mean()}", f"std(J)={J.std()}", f"(J<0)={(J<0).sum()/(D*H*W)*100:.5f}%")
 
     torch_jac_det_std = J.std()
 
