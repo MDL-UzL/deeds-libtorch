@@ -275,10 +275,28 @@ torch::Tensor applyBCV_interp3(
     bool* flag = pFlag.data_ptr<bool>();
 
     float* interp=new float[m*n*o];
-    float* x1=new float[m*n*o];
+    float* x1=new float[m*n*o]; // full sized
     float* y1=new float[m*n*o];
     float* z1=new float[m*n*o];
 
+    // This preparation is needed to calculate the interpolation (taken from upsampleDeformationsCL). To make it fit pytorchs interpolate behaviour
+    // I had to add *1.5 in the scaling factors. We should better take a look at
+    // consistentMappingCL() and upsampleDeformationsCL() because these are the only two functions using interp3.
+    // using interp3 alone makes no sense since the "interpolation" is prepared in consistentMappingCL() and upsampleDeformationsCL()
+    // and won't work without the preparation
+    float scale_m=(float)m/(float)m2*1.5;
+    float scale_n=(float)n/(float)n2*1.5;
+    float scale_o=(float)o/(float)o2*1.5;
+
+    for(int k=0;k<o;k++){
+        for(int j=0;j<n;j++){
+            for(int i=0;i<m;i++){
+                x1[i+j*m+k*m*n]=j/scale_n; //x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                y1[i+j*m+k*m*n]=i/scale_m; //y helper var
+                z1[i+j*m+k*m*n]=k/scale_o; //z helper var
+            }
+        }
+    }
 
     interp3(
         interp, // interpolated output

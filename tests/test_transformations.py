@@ -109,9 +109,9 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Prepare inputs
         input_size = (2,2,2)
-        _input = torch.rand(input_size)
+        _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
-        _input[1,0,0] = 2.
+        _input[0,0,0] = 1.
 
         print(_input.shape)
 
@@ -129,15 +129,10 @@ class TestTransformations(unittest.TestCase):
         torch_interpolated = torch.nn.functional.interpolate(
             _input.unsqueeze(0).unsqueeze(0),
             output_size,
-            # scale_factor=2,
-            # mode='nearest',
             mode='trilinear',
             align_corners=True
         ).squeeze(0).squeeze(0)
         print(torch_interpolated)
-
-
-
 
         #########################################################
         # Assert difference
