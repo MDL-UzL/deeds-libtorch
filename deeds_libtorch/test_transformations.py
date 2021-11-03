@@ -87,7 +87,10 @@ if __name__ == '__main__':
                 disp_field_envelope_z.reshape(1,1,D+2,H,W), Z_WEIGHTS
             ).reshape(D,H,W)
 
-            return (d_disp_over_dx, d_disp_over_dy, d_disp_over_dz)
+            # TODO Check why d_disp_over_dy and d_disp_over_dx need to be swapped?
+            # This produces same result as deeds but I assume its a mistake.
+            # J<0 count is halved when dx, dy, dz order is used
+            return (d_disp_over_dy, d_disp_over_dx, d_disp_over_dz)
 
         J11, J12, J13  = jacobians_row_entries(x_disp_field) # First row
         J21, J22, J23  = jacobians_row_entries(y_disp_field) # Second row
