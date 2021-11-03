@@ -4,11 +4,23 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: test_transformations.py",
             "type": "python",
             "request": "launch",
             "program": "/Users/christianweihsbach/code/deeds-libtorch/deeds_libtorch/test_transformations.py",
+            "console": "integratedTerminal",
+            "env": {
+                "USE_JIT_COMPILE": "1"
+              },
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Current file",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
             "console": "integratedTerminal",
             "env": {
                 "USE_JIT_COMPILE": "1"
