@@ -258,16 +258,56 @@ torch::Tensor applyBCV_jacobian(
 }
 
 
+torch::Tensor applyBCV_interp3(
+    torch::Tensor pInput,
+    torch::Tensor pOutput_size,
+    torch::Tensor pFlag) {
+
+    int m2 = pInput.size(0);
+    int n2 = pInput.size(1);
+    int o2 = pInput.size(2);
+
+    int m = pOutput_size[0].item<int>();
+    int n = pOutput_size[1].item<int>();
+    int o = pOutput_size[2].item<int>();
+
+    float* input = pInput.data_ptr<float>();
+    bool* flag = pFlag.data_ptr<bool>();
+
+    float* interp=new float[m*n*o];
+    float* x1=new float[m*n*o];
+    float* y1=new float[m*n*o];
+    float* z1=new float[m*n*o];
+
+
+    interp3(
+        interp, // interpolated output
+	    input, // gridded flow field
+		x1, y1, z1, //helper var (output size)
+		m, n, o, //output size
+		m2, n2, o2, //gridded flow field size
+		*flag
+    );
+
+    std::vector<float> interp_vect{interp, interp + m*n*o};
+
+    auto options = torch::TensorOptions();
+    return torch::from_blob(interp_vect.data(), {m,n,o}, options).clone();
+}
+
+
 
 #ifdef TORCH_EXTENSION_NAME
     PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         m.def("applyBCV_main", &applyBCV_main, "applyBCV_main");
         m.def("applyBCV_jacobian", &applyBCV_jacobian, "applyBCV_jacobian");
+        m.def("applyBCV_interp3", &applyBCV_interp3, "applyBCV_interp3");
     }
 
 #else
     TORCH_LIBRARY(deeds_applyBCV, m) {
         m.def("applyBCV_main", &applyBCV_main);
         m.def("applyBCV_jacobian", &applyBCV_jacobian);
+        m.def("applyBCV_interp3", &applyBCV_interp3);
     }
 #endif

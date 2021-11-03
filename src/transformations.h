@@ -8,6 +8,15 @@ void interp3(float* interp, // interpolated output
 			 int m,int n,int o, //output size
 			 int m2,int n2,int o2, //gridded flow field size
 			 bool flag){
+
+	for(int pri=0;pri<m2*n2*o2 ;pri++){
+		std::cout<<input[pri]<<" ";
+	}
+
+	std::cout<<"\n";
+	for(int pri=0;pri<m*n*o ;pri++){
+		std::cout<<x1[pri]<<" ";
+	}
 	for(int k=0;k<o;k++){ //iterate output z
 		for(int j=0;j<n;j++){ // iterate output y
 			for(int i=0;i<m;i++){ //iterate x
@@ -40,6 +49,9 @@ void interp3(float* interp, // interpolated output
 				+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2];
 			}
 		}
+	}
+	for(int pri=0;pri<m*n*o ;pri++){
+		std::cout<<interp[pri]<<" ";
 	}
 }
 

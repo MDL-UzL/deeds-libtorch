@@ -104,5 +104,50 @@ class TestTransformations(unittest.TestCase):
 
 
 
+    def test_interp3(self):
+
+        #########################################################
+        # Prepare inputs
+        input_size = (2,2,2)
+        _input = torch.rand(input_size)
+        # _input[0,0,0] = 0
+        _input[1,0,0] = 2.
+
+        print(_input.shape)
+
+        output_size = (4,4,4)
+
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'interp3': ")
+        cpp_interp3 = self.applyBCV_module.applyBCV_interp3(_input, torch.Tensor(output_size), torch.tensor([False], dtype=torch.bool))
+        print(cpp_interp3)
+
+        #########################################################
+        # Get torch output
+        print("\nRunning torch 'interpolate': ")
+        torch_interpolated = torch.nn.functional.interpolate(
+            _input.unsqueeze(0).unsqueeze(0),
+            output_size,
+            # scale_factor=2,
+            # mode='nearest',
+            mode='trilinear',
+            align_corners=True
+        ).squeeze(0).squeeze(0)
+        print(torch_interpolated)
+
+
+
+
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_interpolated, cpp_interp3,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
+
+
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    tests = TestTransformations()
+    tests.test_interp3()
