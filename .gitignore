@@ -6,5 +6,9 @@ build-jit/*
 lib/libtorch/*
 !libtorch/README.md
 
+# Data files
+*.zip
+
 # System files
 .DS_Store
+**/__pycache__/**
