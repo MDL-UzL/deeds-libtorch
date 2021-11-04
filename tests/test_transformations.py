@@ -112,10 +112,12 @@ class TestTransformations(unittest.TestCase):
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
+        # _input[1,0,0] = .5
+        # _input[1,1,1] = 1.
 
         print(_input.shape)
 
-        output_size = (4,4,4)
+        output_size = (3,3,3)
 
         #########################################################
         # Get deeds output
@@ -134,6 +136,23 @@ class TestTransformations(unittest.TestCase):
         ).squeeze(0).squeeze(0)
         print(torch_interpolated)
 
+        print("\nRunning grid output: ")
+        N, C, H_in, W_in, D_in = 1,1,2,2,2
+
+        # Create identity grid
+        affine = torch.eye(3,4)
+        affine = affine.unsqueeze(0)
+        id_grid_output_size = (1,1, *output_size)
+
+        def pad_same_around(paddeee, pad_count_per_side):
+            padded = torch.cat([paddeee[0:1,:,].repeat(pad_count_per_side,1,1), paddeee, paddeee[-1:,:,:].repeat(pad_count_per_side,1,1)], dim=0)
+            padded = torch.cat([padded[:,0:1,:].repeat(1,pad_count_per_side,1), padded, padded[:,-1:,:].repeat(1,pad_count_per_side,1)], dim=1)
+            padded = torch.cat([padded[:,:,0:1].repeat(1,1,pad_count_per_side), padded, padded[:,:,-1:].repeat(1,1,pad_count_per_side)], dim=2)
+            return padded
+
+        id_grid = torch.nn.functional.affine_grid(affine, size=id_grid_output_size, align_corners=False)
+        grid_output = torch.nn.functional.grid_sample(pad_same_around(_input, 1).unsqueeze(0).unsqueeze(0), id_grid*1.2, mode='bilinear', align_corners=False)
+        print(grid_output)
         #########################################################
         # Assert difference
         assert torch.allclose(torch_interpolated, cpp_interp3,

@@ -284,9 +284,9 @@ torch::Tensor applyBCV_interp3(
     // consistentMappingCL() and upsampleDeformationsCL() because these are the only two functions using interp3.
     // using interp3 alone makes no sense since the "interpolation" is prepared in consistentMappingCL() and upsampleDeformationsCL()
     // and won't work without the preparation
-    float scale_m=(float)m/(float)m2*1.5;
-    float scale_n=(float)n/(float)n2*1.5;
-    float scale_o=(float)o/(float)o2*1.5;
+    float scale_m=(float)m/(float)m2;
+    float scale_n=(float)n/(float)n2;
+    float scale_o=(float)o/(float)o2;
 
     for(int k=0;k<o;k++){
         for(int j=0;j<n;j++){

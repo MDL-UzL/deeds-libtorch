@@ -20,7 +20,9 @@ void interp3(float* interp, // interpolated output
 	for(int k=0;k<o;k++){ //iterate output z
 		for(int j=0;j<n;j++){ // iterate output y
 			for(int i=0;i<m;i++){ //iterate x
-				int x=floor(x1[i+j*m+k*m*n]); int y=floor(y1[i+j*m+k*m*n]);  int z=floor(z1[i+j*m+k*m*n]);
+				int x=floor(x1[i+j*m+k*m*n]);
+				int y=floor(y1[i+j*m+k*m*n]);
+				int z=floor(z1[i+j*m+k*m*n]);
 				float dx=x1[i+j*m+k*m*n]-x; float dy=y1[i+j*m+k*m*n]-y; float dz=z1[i+j*m+k*m*n]-z; // dx,dy,dz in gridded flow field relative coordinates
 
 				if(flag){
@@ -244,32 +246,45 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
     float* ws2=new float[m*n*o];
 
     for(int i=0;i<m*n*o;i++){
-        us[i]=u[i]*factor1; vs[i]=v[i]*factor1;	ws[i]=w[i]*factor1;
-        us2[i]=u2[i]*factor1; vs2[i]=v2[i]*factor1;	ws2[i]=w2[i]*factor1;
+        us[i]=u[i]*factor1;
+		vs[i]=v[i]*factor1;
+		ws[i]=w[i]*factor1;
+
+		us2[i]=u2[i]*factor1;
+		vs2[i]=v2[i]*factor1;
+		ws2[i]=w2[i]*factor1;
     }
 
     for(int it=0;it<10;it++){
-        interp3(u,us2,us,vs,ws,m,n,o,m,n,o,true);
-        interp3(v,vs2,us,vs,ws,m,n,o,m,n,o,true);
-        interp3(w,ws2,us,vs,ws,m,n,o,m,n,o,true);
-        for(int i=0;i<m*n*o;i++){
+        interp3(u,us2, us,vs,ws, m,n,o, m,n,o, true);
+        interp3(v,vs2, us,vs,ws, m,n,o, m,n,o, true);
+        interp3(w,ws2, us,vs,ws, m,n,o, m,n,o, true);
+
+		for(int i=0;i<m*n*o;i++){
             u[i]=0.5*us[i]-0.5*u[i];
             v[i]=0.5*vs[i]-0.5*v[i];
             w[i]=0.5*ws[i]-0.5*w[i];
 
         }
-        interp3(u2,us,us2,vs2,ws2,m,n,o,m,n,o,true);
-        interp3(v2,vs,us2,vs2,ws2,m,n,o,m,n,o,true);
-        interp3(w2,ws,us2,vs2,ws2,m,n,o,m,n,o,true);
-        for(int i=0;i<m*n*o;i++){
+
+		interp3(u2,us, us2,vs2,ws2, m,n,o, m,n,o, true);
+        interp3(v2,vs, us2,vs2,ws2, m,n,o, m,n,o, true);
+        interp3(w2,ws, us2,vs2,ws2, m,n,o, m,n,o, true);
+
+		for(int i=0;i<m*n*o;i++){
             u2[i]=0.5*us2[i]-0.5*u2[i];
             v2[i]=0.5*vs2[i]-0.5*v2[i];
             w2[i]=0.5*ws2[i]-0.5*w2[i];
         }
 
         for(int i=0;i<m*n*o;i++){
-            us[i]=u[i]; vs[i]=v[i]; ws[i]=w[i];
-            us2[i]=u2[i]; vs2[i]=v2[i]; ws2[i]=w2[i];
+            us[i]=u[i];
+			vs[i]=v[i];
+			ws[i]=w[i];
+
+			us2[i]=u2[i];
+			vs2[i]=v2[i];
+			ws2[i]=w2[i];
         }
 
     }
