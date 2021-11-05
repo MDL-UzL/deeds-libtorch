@@ -313,6 +313,28 @@ torch::Tensor applyBCV_interp3(
     return torch::from_blob(interp_vect.data(), {m,n,o}, options).clone();
 }
 
+torch::Tensor applyBCV_volfilter(
+    torch::Tensor pInput,
+    torch::Tensor pKernel_sz,
+    torch::Tensor pSigma) {
+
+    int m = pInput.size(0);
+    int n = pInput.size(1);
+    int o = pInput.size(2);
+
+    int Kernel_sz = pKernel_sz.item<int>();
+    float Sigma = pSigma.item<float>();
+
+    float* input = pInput.data_ptr<float>();
+
+    volfilter(float* imagein,int m,int n,int o,int length,float sigma);
+
+    std::vector<float> gauss_vect{imagein, imagein + m*n*o};
+
+    auto options = torch::TensorOptions();
+    return torch::from_blob(gauss_vect.data(), {m,n,o}, options).clone();
+}
+
 
 
 #ifdef TORCH_EXTENSION_NAME
@@ -320,6 +342,7 @@ torch::Tensor applyBCV_interp3(
         m.def("applyBCV_main", &applyBCV_main, "applyBCV_main");
         m.def("applyBCV_jacobian", &applyBCV_jacobian, "applyBCV_jacobian");
         m.def("applyBCV_interp3", &applyBCV_interp3, "applyBCV_interp3");
+        m.def("applyBCV_volfilter", &applyBCV_volfilter,"applyBCV_volfilter");
     }
 
 #else
@@ -327,5 +350,7 @@ torch::Tensor applyBCV_interp3(
         m.def("applyBCV_main", &applyBCV_main);
         m.def("applyBCV_jacobian", &applyBCV_jacobian);
         m.def("applyBCV_interp3", &applyBCV_interp3);
+        m.def("applyBCV_volfilter", &applyBCV_volfilter);
+
     }
 #endif

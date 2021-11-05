@@ -108,3 +108,24 @@ def std_det_jacobians(x_disp_field, y_disp_field, z_disp_field, factor):
         f"(J<0)={(jac_deteterminants<0).sum()/spatial_len*100:.5f}%")
 
     return std_det_jacobians
+
+def gaussian_filter(img_in,kernel_sz,sigma,channels=1,dim=3):#channels-slices?
+    kernel_size=[kernel_sz]*dim
+    sigma=[sigma]*dim
+    kernel = torch.tensor([1])
+    meshgrids = torch.meshgrid([torch.arange(size, dtype=torch.float32) for size in kernel_size])
+    for size,sig,grid in zip(kernel_size,sigma,meshgrids):
+        mu=(size-1)/2 #mu-mean
+        kernel*=torch.exp(-((grid - mu) / sig) ** 2 / 2)
+    kernel=kernel/torch.sum(kernel)#normalizing
+    #...reshaping to depthwise convolution....
+    kernel=kernel.view(1, 1, kernel.size())
+    kernel = kernel.repeat(channels, kernel.dim() - 1)
+    if dim==1:
+        conv_type=F.Conv1d
+    elif dim==2:
+        conv_type=F.Conv2d
+    elif dim==3:
+        conv_type=F.Conv3d
+    img_out=conv_type(img_in,weight=kernel,groups=channels)
+    return img_out

@@ -140,9 +140,40 @@ class TestTransformations(unittest.TestCase):
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
+        
+    def test_volfilter(self):
+            #########################################################
+        # Prepare inputs
+        input_size = (2,2,2)
+        _input = torch.zeros(input_size)
+        # _input[0,0,0] = 0
+        _input[0,0,0] = 1.
+        sigma=1
+        kernel_sz=3
+
+
+        print(_input.shape)
+
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'vol_filter': ")
+        cpp_volfilter = self.applyBCV_module.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
+        print(cpp_volfilter)
+
+        #########################################################
+        # Get torch output
+        print("\nRunning torch 'vol_filter': ")
+        torch_volfilter = self.transformations.gaussian_filter(_input,kernel_sz,sigma,dim=3)
+        print("Vol_filter is:",torch_volfilter)
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_volfilter, cpp_volfilter,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
 
 
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_interp3()
+    tests.test_volfilter()

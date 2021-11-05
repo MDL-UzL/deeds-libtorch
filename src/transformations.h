@@ -292,7 +292,7 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
 
 void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow field
 							float* u0,float* v0,float* w0, //gridded flow field: x-disps, y-disps, z-disps
-							int m,int n,int o, //full size
+							int m,int n,int o, //full size output
 							int m2,int n2,int o2){ //gridded size
 
 
