@@ -1,4 +1,3 @@
-import sys
 import os
 import unittest
 import importlib.util
@@ -14,7 +13,6 @@ def load_module_from_path(_path):
     spec = importlib.util.spec_from_file_location(str(_path), _path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-
     return mod
 
 
@@ -56,7 +54,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 1
+        FACTOR = 0.5
         D, H, W =  6, 6, 2
 
         DELTA_W = +6.
@@ -108,14 +106,14 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (2,2,2)
+        input_size = [2,2,2]
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
 
         print(_input.shape)
 
-        output_size = (4,4,4)
+        output_size = [4,4,4]
 
         #########################################################
         # Get deeds output
@@ -126,12 +124,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'interpolate': ")
-        torch_interpolated = torch.nn.functional.interpolate(
-            _input.unsqueeze(0).unsqueeze(0),
-            output_size,
-            mode='trilinear',
-            align_corners=True
-        ).squeeze(0).squeeze(0)
+        torch_interpolated = self.transformations.interp3d(_input,output_size)
         print(torch_interpolated)
 
         #########################################################
@@ -140,16 +133,17 @@ class TestTransformations(unittest.TestCase):
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
-        
+
     def test_volfilter(self):
             #########################################################
         # Prepare inputs
-        input_size = (2,2,2)
-        _input = torch.zeros(input_size)
+        input_size = (3,3,3)
+        _input = torch.randn(input_size)
+        print("input is",_input)
         # _input[0,0,0] = 0
-        _input[0,0,0] = 1.
-        sigma=1
-        kernel_sz=3
+        _input[0,0,0] = 5.
+        sigma=0.5
+        kernel_sz=2
 
 
         print(_input.shape)
@@ -163,13 +157,78 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'vol_filter': ")
-        torch_volfilter = self.transformations.gaussian_filter(_input,kernel_sz,sigma,dim=3)
+        torch_volfilter = self.transformations.vol_filter(_input,kernel_sz,sigma)
         print("Vol_filter is:",torch_volfilter)
         #########################################################
         # Assert difference
         assert torch.allclose(torch_volfilter, cpp_volfilter,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
+    
+    
+    
+    def test_consistentMappingCL(self):
+
+        #########################################################
+        # Prepare inputs
+        FACTOR = 1
+        D, H, W =  6, 6, 2
+
+        DELTA_W = +6.
+        DELTA_H = +2.
+        DELTA_D = +.5
+
+        DELTA_W2 = +7.
+        DELTA_H2 = +3.
+        DELTA_D2 = +.6
+
+        ## Generate some artificial displacements for x,y,z
+        x_disp_field = torch.zeros(D,H,W)
+        y_disp_field = torch.zeros(D,H,W)
+        z_disp_field = torch.zeros(D,H,W)
+
+        ##Generate 2nd flow field
+        x2_disp_field = torch.zeros(D,H,W)
+        y2_disp_field = torch.zeros(D,H,W)
+        z2_disp_field = torch.zeros(D,H,W)
+
+        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
+        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
+        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
+        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
+        # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
+        # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
+        # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
+
+
+
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'consistentMappingCL': ")
+        cpp_consistentMappingCL = self.applyBCV_module.applyBCV_consistentMappingCL(
+            x_disp_field,
+            y_disp_field,
+            z_disp_field,
+            torch.tensor([FACTOR], dtype=torch.int))
+
+
+
+        #########################################################
+        # Get torch output
+        print("\nRunning torch 'std_det_jacobians': ")
+        torch_consistentMappingCL = self.transformations.consistentMappingCL(
+            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
+        )
+
+
+
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_consistentMappingCL, cpp_consistentMappingCL,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
+
 
 
 
@@ -177,3 +236,4 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
     tests.test_volfilter()
+    tests.test_consistentMappingCL()

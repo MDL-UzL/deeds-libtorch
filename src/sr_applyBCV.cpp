@@ -231,160 +231,28 @@ int64_t applyBCV_main(int64_t _argc, std::vector<std::string> _argv) {
     return main(_argc, const_cast<char* const *>(argv.data()));
 }
 
-torch::Tensor applyBCV_jacobian(
-    torch::Tensor input_u,
-    torch::Tensor input_v,
-    torch::Tensor input_w,
-    torch::Tensor input_factor) {
 
-    float* u = input_u.data_ptr<float>();
-    float* v = input_v.data_ptr<float>();
-    float* w = input_w.data_ptr<float>();
-    int* factor = input_factor.data_ptr<int>();
 
-    int m = input_u.size(2);
-    int n = input_u.size(1);
-    int o = input_u.size(0);
-
-    // cout<<"m"<<m;
-    // cout<<"n"<<n;
-    // cout<<"o"<<o;
-
-    float jacobian_output = jacobian(u, v, w, m, n, o, *factor);
-    std::vector<float> jac_vect{jacobian_output};
-
-    auto options = torch::TensorOptions();
-    return torch::from_blob(jac_vect.data(), {1}, options).clone();
+torch::tensor applyBCV_interp3(torch::tensor) {
+    // convert torch::tensor to float*
+    return interp3(float* interp, // interpolated output
+			 float* input, // gridded flow field
+			 float* x1,float* y1,float* z1, //helper var (output size)
+			 int m,int n,int o, //output size
+			 int m2,int n2,int o2, //gridded flow field size
+			 bool flag);
 }
-
-
-torch::Tensor applyBCV_interp3(
-    torch::Tensor pInput,
-    torch::Tensor pOutput_size,
-    torch::Tensor pFlag) {
-
-    int m2 = pInput.size(0);
-    int n2 = pInput.size(1);
-    int o2 = pInput.size(2);
-
-    int m = pOutput_size[0].item<int>();
-    int n = pOutput_size[1].item<int>();
-    int o = pOutput_size[2].item<int>();
-
-    float* input = pInput.data_ptr<float>();
-    bool* flag = pFlag.data_ptr<bool>();
-
-    float* interp=new float[m*n*o];
-    float* x1=new float[m*n*o]; // full sized
-    float* y1=new float[m*n*o];
-    float* z1=new float[m*n*o];
-
-    // This preparation is needed to calculate the interpolation (taken from upsampleDeformationsCL). To make it fit pytorchs interpolate behaviour
-    // I had to add *1.5 in the scaling factors. We should better take a look at
-    // consistentMappingCL() and upsampleDeformationsCL() because these are the only two functions using interp3.
-    // using interp3 alone makes no sense since the "interpolation" is prepared in consistentMappingCL() and upsampleDeformationsCL()
-    // and won't work without the preparation
-    float scale_m=(float)m/(float)m2*1.5;
-    float scale_n=(float)n/(float)n2*1.5;
-    float scale_o=(float)o/(float)o2*1.5;
-
-    for(int k=0;k<o;k++){
-        for(int j=0;j<n;j++){
-            for(int i=0;i<m;i++){
-                x1[i+j*m+k*m*n]=j/scale_n; //x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
-                y1[i+j*m+k*m*n]=i/scale_m; //y helper var
-                z1[i+j*m+k*m*n]=k/scale_o; //z helper var
-            }
-        }
-    }
-
-    interp3(
-        interp, // interpolated output
-	    input, // gridded flow field
-		x1, y1, z1, //helper var (output size)
-		m, n, o, //output size
-		m2, n2, o2, //gridded flow field size
-		*flag
-    );
-
-    std::vector<float> interp_vect{interp, interp + m*n*o};
-
-    auto options = torch::TensorOptions();
-    return torch::from_blob(interp_vect.data(), {m,n,o}, options).clone();
-}
-
-torch::Tensor applyBCV_volfilter(
-    torch::Tensor pInput,
-    torch::Tensor pKernel_sz,
-    torch::Tensor pSigma) {
-
-    int m = pInput.size(0);
-    int n = pInput.size(1);
-    int o = pInput.size(2);
-
-    int Kernel_sz = pKernel_sz.item<int>();
-    float Sigma = pSigma.item<float>();
-
-    float* input = pInput.data_ptr<float>();
-
-    volfilter(input, m, n, o, Kernel_sz, Sigma);
-
-    std::vector<float> gauss_vect{input, input + m*n*o};
-
-    auto options = torch::TensorOptions();
-    return torch::from_blob(gauss_vect.data(), {m,n,o}, options).clone();
-}
-
-torch::Tensor applyBCV_consistentMappingCL(
-    torch::Tensor input_u,
-    torch::Tensor input_v,
-    torch::Tensor input_w,
-    torch::Tensor input_u2,
-    torch::Tensor input_v2,
-    torch::Tensor input_w2,
-    torch::Tensor input_factor) {
-
-    float* u = input_u.data_ptr<float>();
-    float* v = input_v.data_ptr<float>();
-    float* w = input_w.data_ptr<float>();
-    float* u2 = input_u2.data_ptr<float>();
-    float* v2 = input_v2.data_ptr<float>();
-    float* w2 = input_w2.data_ptr<float>();
-    int* factor = input_factor.data_ptr<int>();
-
-    int m = input_u.size(2);
-    int n = input_u.size(1);
-    int o = input_u.size(0);
-
-    // cout<<"m"<<m;
-    // cout<<"n"<<n;
-    // cout<<"o"<<o;
-
-    void consistmapout=consistentMappingCL(u, v, w, u2, v2, w2, m, n, o, *factor);
-    std::vector<float> mapCL_vect{consistmapout};
-
-    auto options = torch::TensorOptions();
-    return torch::from_blob(mapCL_vect.data(), {1}, options).clone();
-}
-
-
 
 #ifdef TORCH_EXTENSION_NAME
     PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         m.def("applyBCV_main", &applyBCV_main, "applyBCV_main");
-        m.def("applyBCV_jacobian", &applyBCV_jacobian, "applyBCV_jacobian");
-        m.def("applyBCV_interp3", &applyBCV_interp3, "applyBCV_interp3");
-        m.def("applyBCV_volfilter", &applyBCV_volfilter,"applyBCV_volfilter");
-        m.def("applyBCV_consistentMappingCL", &applyBCV_consistentMappingCL,"applyBCV_consistentMappingCL");
     }
-
 #else
     TORCH_LIBRARY(deeds_applyBCV, m) {
         m.def("applyBCV_main", &applyBCV_main);
-        m.def("applyBCV_jacobian", &applyBCV_jacobian);
-        m.def("applyBCV_interp3", &applyBCV_interp3);
-        m.def("applyBCV_volfilter", &applyBCV_volfilter);
-        m.def("applyBCV_consistentMappingCL", &applyBCV_consistentMappingCL);
+    }
 
+    TORCH_LIBRARY(deeds_applyBCV, m) {
+        m.def("applyBCV_interp3", &applyBCV_interp3);
     }
 #endif
