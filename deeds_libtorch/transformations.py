@@ -209,3 +209,38 @@ def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_
     return disp_field_envelope_x,disp_field_envelope_y,disp_field_envelope_z,disp_field_envelope_x_2,disp_field_envelope_y_2,disp_field_envelope_z_2
 
 
+
+def interp3_naive(_input, # interpolated output
+			 x1, y1, z1, # helper var (output size)
+             output_size, flag):
+    m, n, o = output_size
+    for k in range(o): # iterate output z
+	    for j in range(n): # iterate output y
+		    for i in range(m): # iterate output x
+                pass
+                x = int(floor(x1[i+j*m+k*m*n]))
+                y = int(floor(y1[i+j*m+k*m*n]))
+                z = int(floor(z1[i+j*m+k*m*n]))
+
+                dx=float(x1[i+j*m+k*m*n]-x)
+                dy=float(y1[i+j*m+k*m*n]-y)
+                dz=float(z1[i+j*m+k*m*n]-z) # dx,dy,dz in gridded flow field relative coordinates
+
+				if flag:
+					x+=j; y+=i; z+=k
+
+				# trilinear interpolation: 8x partial cube volume from desired corner point * value of corner point
+				interp[i+j*m+k*m*n]=\
+				(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+				#reziprocal: when dx=0  	we want to have val at idx_x+1
+				+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+				+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+				+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+
+				+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+				+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+				+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+											#3-dim indexing of flattened array
+				+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+
+    return interpolated
