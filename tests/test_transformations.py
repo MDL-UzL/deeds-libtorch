@@ -155,7 +155,70 @@ class TestTransformations(unittest.TestCase):
         print(grid_output)
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_interpolated, cpp_interp3,
+        assert torch.allclose(torch_volfilter, cpp_volfilter,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
+
+
+    def test_consistentMappingCL(self):
+
+        #########################################################
+        # Prepare inputs
+        FACTOR = 1
+        D, H, W =  6, 6, 2
+
+        DELTA_W = +6.
+        DELTA_H = +2.
+        DELTA_D = +.5
+
+        DELTA_W2 = +7.
+        DELTA_H2 = +3.
+        DELTA_D2 = +.6
+
+        ## Generate some artificial displacements for x,y,z
+        x_disp_field = torch.zeros(D,H,W)
+        y_disp_field = torch.zeros(D,H,W)
+        z_disp_field = torch.zeros(D,H,W)
+
+        ##Generate 2nd flow field
+        x2_disp_field = torch.zeros(D,H,W)
+        y2_disp_field = torch.zeros(D,H,W)
+        z2_disp_field = torch.zeros(D,H,W)
+
+        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
+        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
+        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
+        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
+        # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
+        # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
+        # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
+
+
+
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'consistentMappingCL': ")
+        cpp_consistentMappingCL = self.applyBCV_module.applyBCV_consistentMappingCL(
+            x_disp_field,
+            y_disp_field,
+            z_disp_field,
+            torch.tensor([FACTOR], dtype=torch.int))
+
+
+
+        #########################################################
+        # Get torch output
+        print("\nRunning torch 'std_det_jacobians': ")
+        torch_consistentMappingCL = self.transformations.consistentMappingCL(
+            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
+        )
+
+
+
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_consistentMappingCL, cpp_consistentMappingCL,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 

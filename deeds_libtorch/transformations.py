@@ -108,3 +108,104 @@ def std_det_jacobians(x_disp_field, y_disp_field, z_disp_field, factor):
         f"(J<0)={(jac_deteterminants<0).sum()/spatial_len*100:.5f}%")
 
     return std_det_jacobians
+
+
+
+def gaussian_filter(kernel_size,sigma,dim=3):
+
+    #Args:Kernel_size=length of gaussian filter
+    #    Sigma=standard deviation
+    #   dim=3-Expecting a 3D image
+    #returns a gaussian filter
+
+    #creating a 3d grid for filter
+    kernel_size=[kernel_size]*dim
+    sigma=[sigma]*dim
+    kernel=1
+    filter_3d=torch.meshgrid([torch.arange(size,dtype=torch.float32) for size in kernel_size])#a 3d grid is inititalized
+    for size,sd,grid in zip(kernel_size,sigma,filter_3d):
+        mu=(size-1)/2
+        kernel*=torch.exp(-((grid - mu) / (2 * sd)) ** 2)#Gaussian_kernel
+    kernel = kernel.clone()/ torch.sum(kernel.clone())#normalizing
+    kernel=kernel.view(1,1,*kernel.size())#for depthwise convolution
+    kernel = kernel.repeat(1, *[1] * (kernel.dim() - 1))
+    return kernel
+
+
+def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
+    #returns a gaussian smooth image
+    weights=gaussian_filter(kernel_sz,sigma)
+    if dim==1:
+        conv=F.conv1d
+    elif dim==2:
+        conv=F.conv2d
+    elif dim==3:
+        conv=F.conv3d
+    #-to check-input.dim=[D,H,W]or[1,1,D,H,W],for 3d conv,dim must be [1,1,D,H,W]
+    image_in=image_in.unsqueeze(0).unsqueeze(0)
+    image_out=conv(image_in,weights)
+    return image_out
+
+
+def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field,factor):
+    assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
+        "Displacement field sizes must match."
+
+    assert x2_disp_field.shape == y2_disp_field.shape == z2_disp_field.shape, \
+        "Displacement field sizes must match."
+    D,H,W=x_disp_field.shape
+
+    #preparing variables
+    factor_inv=1.0/factor
+
+    #Creating Flow field for forward mapping
+    disp_field_envelope_x_temp = torch.cat([x_disp_field[:,:,0:1],x_disp_field,x_disp_field[:,:,-1:]],dim=2)
+    disp_field_envelope_y_temp = torch.cat([y_disp_field[:,:,0:1],y_disp_field,y_disp_field[:,:,-1:]],dim=1)
+    disp_field_envelope_z_temp = torch.cat([z_disp_field[:,:,0:1],z_disp_field,z_disp_field[:,:,-1:]],dim=0)
+
+    #multiplying with the factor
+    disp_field_envelope_x_inv=torch.mul(disp_field_envelope_x_temp,factor_inv)
+    disp_field_envelope_y_inv=torch.mul(disp_field_envelope_y_temp,factor_inv)
+    disp_field_envelope_z_inv=torch.mul(disp_field_envelope_z_temp,factor_inv)
+
+    #interpolating.......
+    disp_field_envelope_x_inv=interp3d(disp_field_envelope_x_inv,output_size=(D,H,W))
+    disp_field_envelope_y_inv=interp3d(disp_field_envelope_y_inv,output_size=(D,H,W))
+    disp_field_envelope_z_inv=interp3d(disp_field_envelope_z_inv,output_size=(D,H,W))
+
+    #some regularisation
+    disp_field_envelope_x=torch.mul(disp_field_envelope_x_inv,0.5)-torch.mul(disp_field_envelope_x_temp,-0.5)
+    disp_field_envelope_y=torch.mul(disp_field_envelope_y_inv,0.5)-torch.mul(disp_field_envelope_y_temp,-0.5)
+    disp_field_envelope_z=torch.mul(disp_field_envelope_z_inv,0.5)-torch.mul(disp_field_envelope_z_temp,-0.5)
+
+    #Creating 2nd Flow field for inverse mapping
+    disp_field_envelope_x_temp_2 = torch.cat([x2_disp_field[:,:,0:1],x_disp_field,x_disp_field[:,:,-1:]],dim=2)
+    disp_field_envelope_y_temp_2 = torch.cat([y2_disp_field[:,:,0:1],y_disp_field,y_disp_field[:,:,-1:]],dim=1)
+    disp_field_envelope_z_temp_2 = torch.cat([z2_disp_field[:,:,0:1],z_disp_field,z_disp_field[:,:,-1:]],dim=0)
+
+    #multiplying with the factor
+    disp_field_envelope_x_inv_2=torch.mul(disp_field_envelope_x_temp_2,factor_inv)
+    disp_field_envelope_y_inv_2=torch.mul(disp_field_envelope_y_temp_2,factor_inv)
+    disp_field_envelope_z_inv_2=torch.mul(disp_field_envelope_z_temp_2,factor_inv)
+
+    #interpolating.......
+    disp_field_envelope_x_inv_2=interp3d(disp_field_envelope_x_inv_2,output_size=(D,H,W))
+    disp_field_envelope_y_inv_2=interp3d(disp_field_envelope_y_inv_2,output_size=(D,H,W))
+    disp_field_envelope_z_inv_2=interp3d(disp_field_envelope_z_inv_2,output_size=(D,H,W))
+
+    #some regularisation
+    disp_field_envelope_x_2=torch.mul(disp_field_envelope_x_inv_2,0.5)-torch.mul(disp_field_envelope_x_temp,-0.5)
+    disp_field_envelope_y_2=torch.mul(disp_field_envelope_y_inv_2,0.5)-torch.mul(disp_field_envelope_y_temp,-0.5)
+    disp_field_envelope_z_2=torch.mul(disp_field_envelope_z_inv_2,0.5)-torch.mul(disp_field_envelope_z_temp,-0.5)
+
+    #multiplying with the factor
+    disp_field_envelope_x*=factor
+    disp_field_envelope_y*=factor
+    disp_field_envelope_z*=factor
+    disp_field_envelope_x_2*=factor
+    disp_field_envelope_y_2*=factor
+    disp_field_envelope_z_2*=factor
+
+    return disp_field_envelope_x,disp_field_envelope_y,disp_field_envelope_z,disp_field_envelope_x_2,disp_field_envelope_y_2,disp_field_envelope_z_2
+
+
