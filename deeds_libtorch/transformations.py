@@ -284,5 +284,5 @@ def interp3_naive(_input, x1, y1, z1, output_size, flag):
 	# 	}
 	# }
 
-    # interp = interp.permute(0,2,1)
+    interp = interp.permute(0,2,1)
     return interp
