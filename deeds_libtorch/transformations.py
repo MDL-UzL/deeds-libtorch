@@ -208,39 +208,80 @@ def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_
 
     return disp_field_envelope_x,disp_field_envelope_y,disp_field_envelope_z,disp_field_envelope_x_2,disp_field_envelope_y_2,disp_field_envelope_z_2
 
+import math
+
+def interp3_naive(_input, x1, y1, z1, output_size, flag):
+    insz_x, insz_y, insz_z = _input.shape
+    osz_x, osz_y, osz_z  = output_size
+
+    def clamp_xyz_idx(idx_x, idx_y, idx_z):
+        return (
+            min(max(idx_x,0),insz_x-1),
+            min(max(idx_y,0),insz_y-1),
+            min(max(idx_z,0),insz_z-1)
+        )
 
 
-def interp3_naive(_input, # interpolated output
-			 x1, y1, z1, # helper var (output size)
-             output_size, flag):
-    m, n, o = output_size
-    for k in range(o): # iterate output z
-	    for j in range(n): # iterate output y
-		    for i in range(m): # iterate output x
-                pass
-                x = int(floor(x1[i+j*m+k*m*n]))
-                y = int(floor(y1[i+j*m+k*m*n]))
-                z = int(floor(z1[i+j*m+k*m*n]))
+    interp = torch.zeros(output_size)
+    for k in range(osz_z): # iterate output z
+        for j in range(osz_y): # iterate output y
+            for i in range(osz_x): # iterate output x
+                x = int(math.floor(x1[i,j,k]))
+                y = int(math.floor(y1[i,j,k]))
+                z = int(math.floor(z1[i,j,k]))
 
-                dx=float(x1[i+j*m+k*m*n]-x)
-                dy=float(y1[i+j*m+k*m*n]-y)
-                dz=float(z1[i+j*m+k*m*n]-z) # dx,dy,dz in gridded flow field relative coordinates
+                dx=float(x1[i,j,k]-x)
+                dy=float(y1[i,j,k]-y)
+                dz=float(z1[i,j,k]-z) # dx,dy,dz in gridded flow field relative coordinates
 
-				if flag:
-					x+=j; y+=i; z+=k
+                if flag:
+                    x+=j; y+=i; z+=k
 
-				# trilinear interpolation: 8x partial cube volume from desired corner point * value of corner point
-				interp[i+j*m+k*m*n]=\
-				(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
-				#reziprocal: when dx=0  	we want to have val at idx_x+1
-				+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
-				+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
-				+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+                # Y,X,Z
+                interp[i,j,k]=\
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	_input[	clamp_xyz_idx(x, y, z)      ]  \
+                +dx*(1.0-dy)*(1.0-dz)*		_input[	clamp_xyz_idx(x+1, y, z)	]  \
+                +(1.0-dx)*dy*(1.0-dz)*		_input[	clamp_xyz_idx(x, y+1, z)    ]  \
+                +(1.0-dx)*(1.0-dy)*dz*		_input[	clamp_xyz_idx(x, y, z+1)	]  \
+                +(1.0-dx)*dy*dz*			_input[	clamp_xyz_idx(x, y+1, z+1)  ]  \
+                +dx*(1.0-dy)*dz*			_input[	clamp_xyz_idx(x+1, y, z+1)	]  \
+                +dx*dy*(1.0-dz)*			_input[	clamp_xyz_idx(x+1, y+1, z)  ]  \
+                +dx*dy*dz*					_input[ clamp_xyz_idx(x+1, y+1, z+1)]
 
-				+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
-				+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
-				+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
-											#3-dim indexing of flattened array
-				+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
 
-    return interpolated
+
+	# 			int x=floor(x1[i+j*m+k*m*n]);
+	# 			int y=floor(y1[i+j*m+k*m*n]);
+	# 			int z=floor(z1[i+j*m+k*m*n]);
+	# 			float dx=x1[i+j*m+k*m*n]-x; float dy=y1[i+j*m+k*m*n]-y; float dz=z1[i+j*m+k*m*n]-z; // dx,dy,dz in gridded flow field relative coordinates
+
+	# 			if(flag){
+	# 				x+=j; y+=i; z+=k;
+	# 			}
+	# 			//trilinear interpolation: 8x partial cube volume from desired corner point * value of corner point
+	# 			interp[i+j*m+k*m*n]=
+	# 			//partial cube volume		//value at corner
+	# 										//x									//y											//z
+	# 			//clamp
+	# 			//clamping seems to be wrong (x <-> y clamping is mixed)
+
+	# 			//							//(0 ... x_interp ... x_idx max)	//(0 ... y_interp ... y_idx max)*x_idx_max	//(0 ... z_interp ... z_idx max)*x_idx_max*y_idx_max
+
+	# 			//reziprocal: when dx=1  	we want to have val at idx_x
+	# 			(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+	# 			//reziprocal: when dx=0  	we want to have val at idx_x+1
+	# 			+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+	# 			+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
+	# 			+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+
+	# 			+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+	# 			+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+	# 			+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
+	# 										//3-dim indexing of flattened array
+	# 			+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2];
+	# 		}
+	# 	}
+	# }
+
+    # interp = interp.permute(0,2,1)
+    return interp

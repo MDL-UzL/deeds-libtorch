@@ -224,7 +224,67 @@ class TestTransformations(unittest.TestCase):
 
 
 
+    def test_naive_interp3(self):
+
+        #########################################################
+        # Prepare inputs
+        input_size = (2,2,2)
+        _input = torch.zeros(input_size)
+        # _input[0,0,0] = 0
+        _input[0,0,0] = 1.
+        _input[1,1-1] = -7.
+        # _input[1,0,0] = .5
+        # _input[1,1,1] = 1.
+
+        print(_input.shape)
+
+        output_size = (3,2,2)
+
+        scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
+
+        x1 = torch.zeros(output_size)
+        y1 = torch.zeros(output_size)
+        z1 = torch.zeros(output_size)
+        m, n, o = output_size
+        for k in range(o):
+            for j in range(n):
+                for i in range(m):
+                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    y1[i,j,k]=j/scale_n; # y helper var
+                    z1[i,j,k]=k/scale_o; # z helper var
+
+        flag = False
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'interp3': ")
+        cpp_interp3 = self.applyBCV_module.applyBCV_interp3(
+            _input,
+            x1, y1, z1,
+            torch.Tensor(output_size),
+            torch.tensor([flag], dtype=torch.bool))
+        print(cpp_interp3)
+
+        #########################################################
+        # Get torch output
+        print("\nRunning torch 'interp3_naive': ")
+        torch_interp3 = self.transformations.interp3_naive(
+            _input,
+            x1, y1, z1,
+            output_size,
+            flag
+        )
+
+        print(torch_interp3)
+
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_interp3, cpp_interp3,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
+
+
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_interp3()
+    tests.test_naive_interp3()
