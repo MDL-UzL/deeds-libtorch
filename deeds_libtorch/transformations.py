@@ -211,34 +211,35 @@ def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_
 import math
 
 def interp3_naive(_input, x1, y1, z1, output_size, flag):
-    insz_x, insz_y, insz_z = _input.shape
-    osz_x, osz_y, osz_z  = output_size
+    insz_y, insz_x, insz_z = _input.shape
+    osz_y, osz_x, osz_z  = output_size
 
     def clamp_xyz_idx(idx_x, idx_y, idx_z):
-        return (
-            min(max(idx_x,0),insz_x-1),
-            min(max(idx_y,0),insz_y-1),
-            min(max(idx_z,0),insz_z-1)
-        )
+        x_clamp = min(max(idx_x,0),insz_x-1)
+        y_clamp = min(max(idx_y,0),insz_y-1)
+        z_clamp = min(max(idx_z,0),insz_z-1)
+        x_clamp, y_clamp, z_clamp = y_clamp, x_clamp, z_clamp
+        return (x_clamp, y_clamp, z_clamp)
+
 
 
     interp = torch.zeros(output_size)
+
     for k in range(osz_z): # iterate output z
         for j in range(osz_y): # iterate output y
             for i in range(osz_x): # iterate output x
-                x = int(math.floor(x1[i,j,k]))
-                y = int(math.floor(y1[i,j,k]))
-                z = int(math.floor(z1[i,j,k]))
+                x = int(math.floor(x1[j,i,k]))
+                y = int(math.floor(y1[j,i,k]))
+                z = int(math.floor(z1[j,i,k]))
 
-                dx=float(x1[i,j,k]-x)
-                dy=float(y1[i,j,k]-y)
-                dz=float(z1[i,j,k]-z) # dx,dy,dz in gridded flow field relative coordinates
+                dx=float(x1[j,i,k]-x)
+                dy=float(y1[j,i,k]-y)
+                dz=float(z1[j,i,k]-z) # dx,dy,dz in gridded flow field relative coordinates
 
                 if flag:
                     x+=j; y+=i; z+=k
-
                 # Y,X,Z
-                interp[i,j,k]=\
+                interp[j,i,k]=\
                 (1.0-dx)*(1.0-dy)*(1.0-dz)*	_input[	clamp_xyz_idx(x, y, z)      ]  \
                 +dx*(1.0-dy)*(1.0-dz)*		_input[	clamp_xyz_idx(x+1, y, z)	]  \
                 +(1.0-dx)*dy*(1.0-dz)*		_input[	clamp_xyz_idx(x, y+1, z)    ]  \
