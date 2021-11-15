@@ -351,13 +351,16 @@ class TestTransformations(unittest.TestCase):
             x_disp_field,
             y_disp_field,
             z_disp_field,
+            x2_disp_field,
+            y2_disp_field,
+            z2_disp_field,
             torch.tensor([FACTOR], dtype=torch.int))
 
 
 
         #########################################################
         # Get torch output
-        print("\nRunning torch 'std_det_jacobians': ")
+        print("\nRunning torch 'consistent mapping': ")
         torch_consistentMappingCL = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
@@ -377,6 +380,4 @@ class TestTransformations(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_naive_interp3()
-    tests.test_volfilter()
     tests.test_consistentMappingCL()
