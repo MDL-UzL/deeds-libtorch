@@ -274,7 +274,7 @@ def interp3_most_naive(
     y1 = y1.reshape(o,n,m)
     z1 = z1.reshape(o,n,m)
     input = input.reshape(-1)
-    interp = interp.reshape(-1)
+    interp = interp.reshape(o,n,m)
 
     for k in range(o):
         for j in range(n):
@@ -289,7 +289,7 @@ def interp3_most_naive(
                 if(flag):
                     x+=j; y+=i; z+=k
 
-                interp[i+j*m+k*m*n]=\
+                interp[k,j,i]=\
                 (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
                 +dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
                 +(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
