@@ -221,17 +221,18 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (2,2,3)
+        input_size = (1,3,3)
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
-        _input[0,1,-1] = -7.
-        _input[0,0,0] = .5
-        _input[0,1,2] = 10.
+        # _input[0,1,-1] = -7.
+        _input[0,-1,-1] = 10
+        # _input[0,1,2] = 10.
 
-        print(_input.shape)
+        print("'interp3' input:")
+        print(_input)
 
-        output_size = (2,4,6)
+        output_size = (4,6,3)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -246,7 +247,7 @@ class TestTransformations(unittest.TestCase):
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
-        flag = False
+        flag = True
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'interp3': ")
@@ -257,6 +258,14 @@ class TestTransformations(unittest.TestCase):
             torch.tensor([flag], dtype=torch.bool))
         print(cpp_interp3)
 
+        cpp_interp3_not_flag = self.applyBCV_module.applyBCV_interp3(
+            _input,
+            x1, y1, z1,
+            torch.Tensor(output_size),
+            torch.tensor([not flag], dtype=torch.bool))
+
+        print("\nDifference: ")
+        print(cpp_interp3_not_flag)
         #########################################################
         # Get torch output
         print("\nRunning torch 'interp3': ")
