@@ -275,14 +275,14 @@ def interp3_most_naive(
     y1 = y1.reshape(o,n,m).permute(2,1,0)
     z1 = z1.reshape(o,n,m).permute(2,1,0)
 
-    input = input.reshape(o2,n2,m2)
+    input = input.reshape(o2,n2,m2).permute(1,2,0)
     interp = interp.reshape(o,n,m)
 
     def clamp_xyz(x,y,z):
         return (
-            min(max(z,0),o2-1),
             min(max(x,0),n2-1),
-            min(max(y,0),m2-1)
+            min(max(y,0),m2-1),
+            min(max(z,0),o2-1)
         )
 
     for k in range(o):
