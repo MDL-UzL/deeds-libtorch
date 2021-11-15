@@ -276,6 +276,13 @@ def interp3_most_naive(
     input = input.reshape(o2,n2,m2)
     interp = interp.reshape(o,n,m)
 
+    def clamp_xyz(x,y,z):
+        return (
+            min(max(z,0),o2-1),
+            min(max(x,0),n2-1),
+            min(max(y,0),m2-1)
+        )
+
     for k in range(o):
         for j in range(n):
             for i in range(m):
@@ -290,13 +297,13 @@ def interp3_most_naive(
                     x+=j; y+=i; z+=k
 
                 interp[k,j,i]=\
-                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[min(max(z,0),o2-1)  		,min(max(x,0),n2-1)		,		min(max(y,0),m2-1)		   ]\
-                +dx*(1.0-dy)*(1.0-dz)*		input[min(max(z,0),o2-1)  		,min(max(x+1,0),n2-1)	,		min(max(y,0),m2-1)		   ]\
-                +(1.0-dx)*dy*(1.0-dz)*		input[min(max(z,0),o2-1)  		,min(max(x,0),n2-1)		,		min(max(y+1,0),m2-1)	   ]\
-                +(1.0-dx)*(1.0-dy)*dz*		input[min(max(z+1,0),o2-1)		,min(max(x,0),n2-1)		,		min(max(y,0),m2-1)		   ]\
-                +(1.0-dx)*dy*dz*			input[min(max(z+1,0),o2-1)		,min(max(x,0),n2-1)		,		min(max(y+1,0),m2-1)	   ]\
-                +dx*(1.0-dy)*dz*			input[min(max(z+1,0),o2-1)		,min(max(x+1,0),n2-1)	,		min(max(y,0),m2-1)		   ]\
-                +dx*dy*(1.0-dz)*			input[min(max(z,0),o2-1)  		,min(max(x+1,0),n2-1)	,		min(max(y+1,0),m2-1)	   ]\
-                +dx*dy*dz*					input[min(max(z+1,0),o2-1)	,min(max(x+1,0),n2-1)		,	  min(max(y+1,0),m2-1)		   ]
-
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[clamp_xyz(x, y, z)]\
+                +dx*(1.0-dy)*(1.0-dz)*		input[clamp_xyz(x+1, y, z)]\
+                +(1.0-dx)*dy*(1.0-dz)*		input[clamp_xyz(x, y+1, z)]\
+                +(1.0-dx)*(1.0-dy)*dz*		input[clamp_xyz(x, y, z+1)]\
+                +(1.0-dx)*dy*dz*			input[clamp_xyz(x, y+1, z+1)]\
+                +dx*(1.0-dy)*dz*			input[clamp_xyz(x+1, y, z+1)]\
+                +dx*dy*(1.0-dz)*			input[clamp_xyz(x+1, y+1, z)]\
+                +dx*dy*dz*					input[clamp_xyz(x+1, y+1, z+1)]
+                
     return interp.reshape(output_shape)
