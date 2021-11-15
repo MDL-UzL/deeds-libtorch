@@ -262,7 +262,7 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     v2=torch.mul(v2,factor)
     w2=torch.mul(w2,factor)
 
-    return u1
+    return u1, v1, w1, u2, v2, w2
 
 
 def upsampleDeformationsCL(u1,v1,w1,u,v,w):
@@ -272,4 +272,4 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w):
     D2,H2,W2=u.shape
     i=D1/D2
     j=H1/H2
-    k=
+    # k=

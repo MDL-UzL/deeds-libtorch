@@ -320,7 +320,14 @@ torch::Tensor applyBCV_volfilter(
     return torch::from_blob(gauss_vect.data(), {m,n,o}, options).clone();
 }
 
-torch::Tensor applyBCV_consistentMappingCL(
+std::tuple<
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor> applyBCV_consistentMappingCL(
+
     torch::Tensor input_u,
     torch::Tensor input_v,
     torch::Tensor input_w,
@@ -337,19 +344,39 @@ torch::Tensor applyBCV_consistentMappingCL(
     float* w2 = input_w2.data_ptr<float>();
     int* factor = input_factor.data_ptr<int>();
 
-    int m = input_u.size(2);
+    int m = input_u.size(0);
     int n = input_u.size(1);
-    int o = input_u.size(0);
+    int o = input_u.size(2);
 
     // cout<<"m"<<m;
     // cout<<"n"<<n;
     // cout<<"o"<<o;
 
     consistentMappingCL(u, v, w, u2, v2, w2, m, n, o, *factor);
-    std::vector<float> mapCL_vect{};
+
+    std::vector<float> new_u{u, u + m*n*o};
+    std::vector<float> new_v{v, v + m*n*o};
+    std::vector<float> new_w{w, w + m*n*o};
+    std::vector<float> new_u2{u2, u2 + m*n*o};
+    std::vector<float> new_v2{v2, v2 + m*n*o};
+    std::vector<float> new_w2{w2, w2 + m*n*o};
 
     auto options = torch::TensorOptions();
-    return torch::from_blob(mapCL_vect.data(), {1}, options).clone();
+
+    return std::tuple<
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor>(
+        torch::from_blob(new_u.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_v.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_w.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_u2.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_v2.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_w2.data(), {m,n,o}, options).clone()
+    );
 }
 
 

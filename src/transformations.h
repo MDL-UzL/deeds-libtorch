@@ -286,7 +286,11 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
 			vs2[i]=v2[i];
 			ws2[i]=w2[i];
         }
-
+			std::cout<<"Iter: "<<it<<"\n";
+			for(int pri=0;pri<m*n*o ;pri++){
+				std::cout<<u[pri]<<" ";
+			}
+			std::cout<<"\n";
     }
 
 
