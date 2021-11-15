@@ -268,11 +268,13 @@ def interp3_most_naive(
     m2,n2,o2 = input.shape
 
     m,n,o =  output_shape
+
     interp = torch.zeros(output_shape)
 
-    x1 = x1.reshape(o,n,m)
-    y1 = y1.reshape(o,n,m)
-    z1 = z1.reshape(o,n,m)
+    x1 = x1.reshape(o,n,m).permute(2,1,0)
+    y1 = y1.reshape(o,n,m).permute(2,1,0)
+    z1 = z1.reshape(o,n,m).permute(2,1,0)
+
     input = input.reshape(o2,n2,m2)
     interp = interp.reshape(o,n,m)
 
@@ -286,12 +288,12 @@ def interp3_most_naive(
     for k in range(o):
         for j in range(n):
             for i in range(m):
-                x=int(math.floor(x1[k,j,i]))
-                y=int(math.floor(y1[k,j,i]))
-                z=int(math.floor(z1[k,j,i]))
-                dx=x1[k,j,i]-x
-                dy=y1[k,j,i]-y
-                dz=z1[k,j,i]-z
+                x=int(math.floor(x1[i,j,k]))
+                y=int(math.floor(y1[i,j,k]))
+                z=int(math.floor(z1[i,j,k]))
+                dx=x1[i,j,k]-x
+                dy=y1[i,j,k]-y
+                dz=z1[i,j,k]-z
 
                 if(flag):
                     x+=j; y+=i; z+=k
@@ -305,5 +307,5 @@ def interp3_most_naive(
                 +dx*(1.0-dy)*dz*			input[clamp_xyz(x+1, y, z+1)]\
                 +dx*dy*(1.0-dz)*			input[clamp_xyz(x+1, y+1, z)]\
                 +dx*dy*dz*					input[clamp_xyz(x+1, y+1, z+1)]
-                
+
     return interp.reshape(output_shape)

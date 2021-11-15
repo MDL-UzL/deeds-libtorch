@@ -221,7 +221,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (2,3,4)
+        input_size = (4,2,3)
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
@@ -231,7 +231,7 @@ class TestTransformations(unittest.TestCase):
 
         print(_input.shape)
 
-        output_size = (2,5,8)
+        output_size = (3,2,6)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -246,7 +246,7 @@ class TestTransformations(unittest.TestCase):
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
-        flag = True
+        flag = False
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'interp3': ")
