@@ -159,12 +159,11 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
 def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field,factor):
     assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
         "Displacement field sizes must match."
-    
     assert x2_disp_field.shape == y2_disp_field.shape == z2_disp_field.shape, \
         "Displacement field sizes must match."
     D,H,W=x_disp_field.shape
 
-    #preparing variables 
+    #preparing variables
     factor_inv=1.0/factor
 
     #Creating Flow field for forward mapping
@@ -217,13 +216,87 @@ def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_
 
     return disp_field_envelope_x,disp_field_envelope_y,disp_field_envelope_z,disp_field_envelope_x_2,disp_field_envelope_y_2,disp_field_envelope_z_2
 
+import math
 
-    
+def interp3_naive(_input, x1, y1, z1, output_size, flag):
+    insz_y, insz_x, insz_z = _input.shape
+    osz_y, osz_x, osz_z  = output_size
 
-    
+    def clamp_xyz_idx(idx_x, idx_y, idx_z):
+        x_clamp = min(max(idx_x,0),insz_x-1)
+        y_clamp = min(max(idx_y,0),insz_y-1)
+        z_clamp = min(max(idx_z,0),insz_z-1)
+        x_clamp, y_clamp, z_clamp = y_clamp, x_clamp, z_clamp
+        return (x_clamp, y_clamp, z_clamp)
 
 
 
-    
+    interp = torch.zeros(output_size)
 
-    
+    for k in range(osz_z): # iterate output z
+        for j in range(osz_y): # iterate output y
+            for i in range(osz_x): # iterate output x
+                x = int(math.floor(x1[j,i,k]))
+                y = int(math.floor(y1[j,i,k]))
+                z = int(math.floor(z1[j,i,k]))
+
+                dx=float(x1[j,i,k]-x)
+                dy=float(y1[j,i,k]-y)
+                dz=float(z1[j,i,k]-z) # dx,dy,dz in gridded flow field relative coordinates
+
+                if flag:
+                    x+=j; y+=i; z+=k
+                # Y,X,Z
+                interp[j,i,k]=\
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	_input[	clamp_xyz_idx(x, y, z)      ]  \
+                +dx*(1.0-dy)*(1.0-dz)*		_input[	clamp_xyz_idx(x+1, y, z)	]  \
+                +(1.0-dx)*dy*(1.0-dz)*		_input[	clamp_xyz_idx(x, y+1, z)    ]  \
+                +(1.0-dx)*(1.0-dy)*dz*		_input[	clamp_xyz_idx(x, y, z+1)	]  \
+                +(1.0-dx)*dy*dz*			_input[	clamp_xyz_idx(x, y+1, z+1)  ]  \
+                +dx*(1.0-dy)*dz*			_input[	clamp_xyz_idx(x+1, y, z+1)	]  \
+                +dx*dy*(1.0-dz)*			_input[	clamp_xyz_idx(x+1, y+1, z)  ]  \
+                +dx*dy*dz*					_input[ clamp_xyz_idx(x+1, y+1, z+1)]
+
+
+
+def interp3_most_naive(
+			 input,
+			 x1, y1, z1,
+            output_shape,
+			  flag):
+
+    m2,n2,o2 = input.shape
+
+    m,n,o =  output_shape
+    interp = torch.zeros(output_shape)
+
+    x1 = x1.reshape(-1)
+    y1 = y1.reshape(-1)
+    z1 = z1.reshape(-1)
+    input = input.reshape(-1)
+    interp = interp.reshape(-1)
+
+    for k in range(o):
+        for j in range(n):
+            for i in range(m):
+                x=int(math.floor(x1[i+j*m+k*m*n]))
+                y=int(math.floor(y1[i+j*m+k*m*n]))
+                z=int(math.floor(z1[i+j*m+k*m*n]))
+                dx=x1[i+j*m+k*m*n]-x
+                dy=y1[i+j*m+k*m*n]-y
+                dz=z1[i+j*m+k*m*n]-z
+
+                if(flag):
+                    x+=j; y+=i; z+=k
+
+                interp[i+j*m+k*m*n]=\
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
+                +dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
+                +(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
+                +(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
+                +(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
+                +dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]\
+                +dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
+                +dx*dy*dz*					input[  min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+
+    return interp.reshape(output_shape)
