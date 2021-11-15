@@ -217,21 +217,22 @@ class TestTransformations(unittest.TestCase):
 
 
 
-    def test_naive_interp3(self):
+    def test_interp3(self):
 
         #########################################################
         # Prepare inputs
-        input_size = (2,2,2)
+        input_size = (1,3,3)
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
-        _input[1,1-1] = -7.
-        # _input[1,0,0] = .5
-        # _input[1,1,1] = 1.
+        # _input[0,1,-1] = -7.
+        _input[0,-1,-1] = 10
+        # _input[0,1,2] = 10.
 
-        print(_input.shape)
+        print("'interp3' input:")
+        print(_input)
 
-        output_size = (1,5,3)
+        output_size = (4,6,3)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -257,10 +258,18 @@ class TestTransformations(unittest.TestCase):
             torch.tensor([flag], dtype=torch.bool))
         print(cpp_interp3)
 
+        cpp_interp3_not_flag = self.applyBCV_module.applyBCV_interp3(
+            _input,
+            x1, y1, z1,
+            torch.Tensor(output_size),
+            torch.tensor([not flag], dtype=torch.bool))
+
+        print("\nDifference: ")
+        print(cpp_interp3_not_flag)
         #########################################################
         # Get torch output
-        print("\nRunning torch 'interp3_naive': ")
-        torch_interp3 = self.transformations.interp3_most_naive(
+        print("\nRunning torch 'interp3': ")
+        torch_interp3 = self.transformations.interp3(
             _input,
             x1, y1, z1,
             output_size,
@@ -381,3 +390,6 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
     tests.test_consistentMappingCL()
+    tests.test_interp3()
+    # tests.test_volfilter()
+    # tests.test_consistentMappingCL()

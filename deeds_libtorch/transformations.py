@@ -8,13 +8,15 @@ from torch.utils.cpp_extension import load
 
 
 def jacobians(x_disp_field, y_disp_field, z_disp_field):
-    # Returns n=DxHxW jacobian matrices (3x3) of displacements per dimension
+    # Returns outsz_y=DxHxW jacobian matrices (3x3) of displacements per dimension
     #
     # Jacobian for a single data point (x,y,z) is
     #
     #   d_x_disp_field/dx  d_x_disp_field/dy  d_x_disp_field/dz
     #   d_y_disp_field/dx  d_y_disp_field/dy  d_y_disp_field/dz
     #   d_z_disp_field/dx  d_z_disp_field/dy  d_z_disp_field/dz
+
+    USE_CONSISTENT_TORCH = False
 
     assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
         "Displacement field sizes must match."
@@ -67,10 +69,14 @@ def jacobians(x_disp_field, y_disp_field, z_disp_field):
             disp_field_envelope_z.reshape(1,1,D+2,H,W), Z_WEIGHTS
         ).reshape(D,H,W)
 
-        # TODO Check why d_disp_over_dy and d_disp_over_dx need to be swapped?
-        # This produces same result as deeds but I assume its a mistake.
-        # J<0 count is halved when dx, dy, dz order is used
-        return (d_disp_over_dy, d_disp_over_dx, d_disp_over_dz)
+        if not USE_CONSISTENT_TORCH:
+            # TODO Check why d_disp_over_dy and d_disp_over_dx need to be swapped?
+            # This produces same result as deeds but I assume its a mistake.
+            # J<0 count is halved when dx, dy, dz order is used
+            return (d_disp_over_dy, d_disp_over_dx, d_disp_over_dz)
+
+        return (d_disp_over_dx, d_disp_over_dy, d_disp_over_dz)
+
 
     J11, J12, J13  = jacobians_row_entries(x_disp_field) # First row
     J21, J22, J23  = jacobians_row_entries(y_disp_field) # Second row
@@ -152,90 +158,70 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
 
 
 
-def interp3_naive(_input, x1, y1, z1, output_size, flag):
-    insz_y, insz_x, insz_z = _input.shape
-    osz_y, osz_x, osz_z  = output_size
 
-    def clamp_xyz_idx(idx_x, idx_y, idx_z):
-        x_clamp = min(max(idx_x,0),insz_x-1)
-        y_clamp = min(max(idx_y,0),insz_y-1)
-        z_clamp = min(max(idx_z,0),insz_z-1)
-        x_clamp, y_clamp, z_clamp = y_clamp, x_clamp, z_clamp
-        return (x_clamp, y_clamp, z_clamp)
+def interp3(input, x1, y1, z1, output_shape, flag):
 
-
-
-    interp = torch.zeros(output_size)
-
-    for k in range(osz_z): # iterate output z
-        for j in range(osz_y): # iterate output y
-            for i in range(osz_x): # iterate output x
-                x = int(math.floor(x1[j,i,k]))
-                y = int(math.floor(y1[j,i,k]))
-                z = int(math.floor(z1[j,i,k]))
-
-                dx=float(x1[j,i,k]-x)
-                dy=float(y1[j,i,k]-y)
-                dz=float(z1[j,i,k]-z) # dx,dy,dz in gridded flow field relative coordinates
-
-                if flag:
-                    x+=j; y+=i; z+=k
-                # Y,X,Z
-                interp[j,i,k]=\
-                (1.0-dx)*(1.0-dy)*(1.0-dz)*	_input[	clamp_xyz_idx(x, y, z)      ]  \
-                +dx*(1.0-dy)*(1.0-dz)*		_input[	clamp_xyz_idx(x+1, y, z)	]  \
-                +(1.0-dx)*dy*(1.0-dz)*		_input[	clamp_xyz_idx(x, y+1, z)    ]  \
-                +(1.0-dx)*(1.0-dy)*dz*		_input[	clamp_xyz_idx(x, y, z+1)	]  \
-                +(1.0-dx)*dy*dz*			_input[	clamp_xyz_idx(x, y+1, z+1)  ]  \
-                +dx*(1.0-dy)*dz*			_input[	clamp_xyz_idx(x+1, y, z+1)	]  \
-                +dx*dy*(1.0-dz)*			_input[	clamp_xyz_idx(x+1, y+1, z)  ]  \
-                +dx*dy*dz*					_input[ clamp_xyz_idx(x+1, y+1, z+1)]
-
-
-
-def interp3_most_naive(
-			 input,
-			 x1, y1, z1,
-            output_shape,
-			  flag):
-
-    m2,n2,o2 = input.shape
-
-    m,n,o =  output_shape
+    USE_CONSISTENT_TORCH = False
+    insz_x, insz_y, insz_z = input.shape
+    outsz_x, outsz_y, outsz_z =  output_shape
     interp = torch.zeros(output_shape)
 
-    x1 = x1.reshape(-1)
-    y1 = y1.reshape(-1)
-    z1 = z1.reshape(-1)
-    input = input.reshape(-1)
-    interp = interp.reshape(-1)
+    if not USE_CONSISTENT_TORCH:
+        x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
 
-    for k in range(o):
-        for j in range(n):
-            for i in range(m):
-                x=int(math.floor(x1[i+j*m+k*m*n]))
-                y=int(math.floor(y1[i+j*m+k*m*n]))
-                z=int(math.floor(z1[i+j*m+k*m*n]))
-                dx=x1[i+j*m+k*m*n]-x
-                dy=y1[i+j*m+k*m*n]-y
-                dz=z1[i+j*m+k*m*n]-z
+    def clamp_xyz(x,y,z):
+        if USE_CONSISTENT_TORCH:
+            return (
+                min(max(x,0), insz_x-1),
+                min(max(y,0), insz_y-1),
+                min(max(z,0), insz_z-1)
+            )
+
+        return (
+            # We have switched index clamping in original implementation
+            min(max(x,0),insz_y-1),
+            min(max(y,0),insz_x-1),
+            min(max(z,0),insz_z-1)
+        )
+
+    for k in range(outsz_z):
+        for j in range(outsz_y):
+            for i in range(outsz_x):
+                x=int(math.floor(x1[i,j,k]))
+                y=int(math.floor(y1[i,j,k]))
+                z=int(math.floor(z1[i,j,k]))
+                dx=x1[i,j,k]-x
+                dy=y1[i,j,k]-y
+                dz=z1[i,j,k]-z
 
                 if(flag):
-                    x+=j; y+=i; z+=k
+                    if USE_CONSISTENT_TORCH:
+                        x+=i
+                        y+=j
+                        z+=k
 
-                interp[i+j*m+k*m*n]=\
-                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
-                +dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
-                +(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
-                +(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
-                +(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
-                +dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]\
-                +dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
-                +dx*dy*dz*					input[  min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+                    else:
+                        x+=j
+                        y+=i
+                        z+=k
 
-    return interp.reshape(output_shape)
+                interp[i,j,k]=\
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[clamp_xyz(x, y, z)]\
+                +dx*(1.0-dy)*(1.0-dz)*		input[clamp_xyz(x+1, y, z)]\
+                +(1.0-dx)*dy*(1.0-dz)*		input[clamp_xyz(x, y+1, z)]\
+                +(1.0-dx)*(1.0-dy)*dz*		input[clamp_xyz(x, y, z+1)]\
+                +(1.0-dx)*dy*dz*			input[clamp_xyz(x, y+1, z+1)]\
+                +dx*(1.0-dy)*dz*			input[clamp_xyz(x+1, y, z+1)]\
+                +dx*dy*(1.0-dz)*			input[clamp_xyz(x+1, y+1, z)]\
+                +dx*dy*dz*					input[clamp_xyz(x+1, y+1, z+1)]
 
+    if not USE_CONSISTENT_TORCH:
+        return interp.permute(2,1,0).reshape(output_shape)
 
+    return interp
 def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     #u1,v1,w1- deformation field1
     #u2,v2,w2- deformation field2
@@ -249,9 +235,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     w2_temp=torch.mul(w2,factor_inv)
 
     #interpolatioing field 2 by compositing with field 1..
-    u1=interp3_most_naive(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-    v1=interp3_most_naive(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-    w1=interp3_most_naive(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+    u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+    v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+    w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
 
     #composition
     u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
@@ -259,9 +245,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
 
     #interpolating field 1 by composition with field2
-    u2=interp3_most_naive(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-    v2=interp3_most_naive(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-    w2=interp3_most_naive(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+    u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+    v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+    w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
 
     #composition
     u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
@@ -287,8 +273,3 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w):
     i=D1/D2
     j=H1/H2
     k=
-
-
-
-
-
