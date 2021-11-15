@@ -328,25 +328,33 @@ std::tuple<
         torch::Tensor,
         torch::Tensor> applyBCV_consistentMappingCL(
 
-    torch::Tensor input_u,
-    torch::Tensor input_v,
-    torch::Tensor input_w,
-    torch::Tensor input_u2,
-    torch::Tensor input_v2,
-    torch::Tensor input_w2,
+    torch::Tensor pInput_u,
+    torch::Tensor pInput_v,
+    torch::Tensor pInput_w,
+    torch::Tensor pInput_u2,
+    torch::Tensor pInput_v2,
+    torch::Tensor pInput_w2,
     torch::Tensor input_factor) {
 
-    float* u = input_u.data_ptr<float>();
-    float* v = input_v.data_ptr<float>();
-    float* w = input_w.data_ptr<float>();
-    float* u2 = input_u2.data_ptr<float>();
-    float* v2 = input_v2.data_ptr<float>();
-    float* w2 = input_w2.data_ptr<float>();
-    int* factor = input_factor.data_ptr<int>();
+    int m = pInput_u.size(0);
+    int n = pInput_u.size(1);
+    int o = pInput_u.size(2);
 
-    int m = input_u.size(0);
-    int n = input_u.size(1);
-    int o = input_u.size(2);
+    torch::Tensor input_u_copy = pInput_u.clone();
+    torch::Tensor input_v_copy = pInput_v.clone();
+    torch::Tensor input_w_copy = pInput_w.clone();
+    torch::Tensor input_u2_copy = pInput_u2.clone();
+    torch::Tensor input_v2_copy = pInput_v2.clone();
+    torch::Tensor input_w2_copy = pInput_w2.clone();
+
+    float* u = input_u_copy.data_ptr<float>();
+    float* v = input_v_copy.data_ptr<float>();
+    float* w = input_w_copy.data_ptr<float>();
+    float* u2 = input_u2_copy.data_ptr<float>();
+    float* v2 = input_v2_copy.data_ptr<float>();
+    float* w2 = input_w2_copy.data_ptr<float>();
+
+    int* factor = input_factor.data_ptr<int>();
 
     // cout<<"m"<<m;
     // cout<<"n"<<n;

@@ -356,7 +356,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'consistentMappingCL': ")
-        cpp_consistentMappingCL = self.applyBCV_module.applyBCV_consistentMappingCL(
+        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = self.applyBCV_module.applyBCV_consistentMappingCL(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -370,7 +370,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'consistent mapping': ")
-        torch_consistentMappingCL = self.transformations.consistentMappingCL(
+        torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
 
