@@ -270,21 +270,21 @@ def interp3_most_naive(
     m,n,o =  output_shape
     interp = torch.zeros(output_shape)
 
-    x1 = x1.reshape(-1)
-    y1 = y1.reshape(-1)
-    z1 = z1.reshape(-1)
+    x1 = x1.reshape(o,n,m)
+    y1 = y1.reshape(o,n,m)
+    z1 = z1.reshape(o,n,m)
     input = input.reshape(-1)
     interp = interp.reshape(-1)
 
     for k in range(o):
         for j in range(n):
             for i in range(m):
-                x=int(math.floor(x1[i+j*m+k*m*n]))
-                y=int(math.floor(y1[i+j*m+k*m*n]))
-                z=int(math.floor(z1[i+j*m+k*m*n]))
-                dx=x1[i+j*m+k*m*n]-x
-                dy=y1[i+j*m+k*m*n]-y
-                dz=z1[i+j*m+k*m*n]-z
+                x=int(math.floor(x1[k,j,i]))
+                y=int(math.floor(y1[k,j,i]))
+                z=int(math.floor(z1[k,j,i]))
+                dx=x1[k,j,i]-x
+                dy=y1[k,j,i]-y
+                dz=z1[k,j,i]-z
 
                 if(flag):
                     x+=j; y+=i; z+=k
