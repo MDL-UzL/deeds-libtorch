@@ -1,17 +1,11 @@
-
+import math
 import os
 import torch
 from torch.functional import align_tensors
 import torch.nn.functional as F
 from torch.utils.cpp_extension import load
 
-def interp3d(input_img,output_size):#not sure about the output size
-    if input_img.dim() == 3 :
-        input_img=input_img.unsqueeze(0).unsqueeze(0)
-        tri_inter3d=F.interpolate(input_img,mode='trilinear',size=output_size,align_corners=True).squeeze(0).squeeze(0)
-    else:
-        tri_inter3d=F.interpolate(input_img,mode='trilinear',size=output_size,align_corners=True)
-    return tri_inter3d
+
 
 def jacobians(x_disp_field, y_disp_field, z_disp_field):
     # Returns n=DxHxW jacobian matrices (3x3) of displacements per dimension
@@ -156,67 +150,7 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
     return image_out
 
 
-def consistentMappingCL(x_disp_field,y_disp_field,z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field,factor):
-    assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
-        "Displacement field sizes must match."
-    assert x2_disp_field.shape == y2_disp_field.shape == z2_disp_field.shape, \
-        "Displacement field sizes must match."
-    D,H,W=x_disp_field.shape
 
-    #preparing variables
-    factor_inv=1.0/factor
-
-    #Creating Flow field for forward mapping
-    disp_field_envelope_x_temp = torch.cat([x_disp_field[:,:,0:1],x_disp_field,x_disp_field[:,:,-1:]],dim=2)
-    disp_field_envelope_y_temp = torch.cat([y_disp_field[:,:,0:1],y_disp_field,y_disp_field[:,:,-1:]],dim=1)
-    disp_field_envelope_z_temp = torch.cat([z_disp_field[:,:,0:1],z_disp_field,z_disp_field[:,:,-1:]],dim=0)
-
-    #multiplying with the factor
-    disp_field_envelope_x_inv=torch.mul(disp_field_envelope_x_temp,factor_inv)
-    disp_field_envelope_y_inv=torch.mul(disp_field_envelope_y_temp,factor_inv)
-    disp_field_envelope_z_inv=torch.mul(disp_field_envelope_z_temp,factor_inv)
-
-    #interpolating.......
-    disp_field_envelope_x_inv=interp3d(disp_field_envelope_x_inv,output_size=(D,H,W))
-    disp_field_envelope_y_inv=interp3d(disp_field_envelope_y_inv,output_size=(D,H,W))
-    disp_field_envelope_z_inv=interp3d(disp_field_envelope_z_inv,output_size=(D,H,W))
-
-    #some regularisation
-    disp_field_envelope_x=torch.mul(disp_field_envelope_x_inv,0.5)-torch.mul(disp_field_envelope_x_temp,-0.5)
-    disp_field_envelope_y=torch.mul(disp_field_envelope_y_inv,0.5)-torch.mul(disp_field_envelope_y_temp,-0.5)
-    disp_field_envelope_z=torch.mul(disp_field_envelope_z_inv,0.5)-torch.mul(disp_field_envelope_z_temp,-0.5)
-
-    #Creating 2nd Flow field for inverse mapping
-    disp_field_envelope_x_temp_2 = torch.cat([x2_disp_field[:,:,0:1],x_disp_field,x_disp_field[:,:,-1:]],dim=2)
-    disp_field_envelope_y_temp_2 = torch.cat([y2_disp_field[:,:,0:1],y_disp_field,y_disp_field[:,:,-1:]],dim=1)
-    disp_field_envelope_z_temp_2 = torch.cat([z2_disp_field[:,:,0:1],z_disp_field,z_disp_field[:,:,-1:]],dim=0)
-
-    #multiplying with the factor
-    disp_field_envelope_x_inv_2=torch.mul(disp_field_envelope_x_temp_2,factor_inv)
-    disp_field_envelope_y_inv_2=torch.mul(disp_field_envelope_y_temp_2,factor_inv)
-    disp_field_envelope_z_inv_2=torch.mul(disp_field_envelope_z_temp_2,factor_inv)
-
-    #interpolating.......
-    disp_field_envelope_x_inv_2=interp3d(disp_field_envelope_x_inv_2,output_size=(D,H,W))
-    disp_field_envelope_y_inv_2=interp3d(disp_field_envelope_y_inv_2,output_size=(D,H,W))
-    disp_field_envelope_z_inv_2=interp3d(disp_field_envelope_z_inv_2,output_size=(D,H,W))
-
-    #some regularisation
-    disp_field_envelope_x_2=torch.mul(disp_field_envelope_x_inv_2,0.5)-torch.mul(disp_field_envelope_x_temp,-0.5)
-    disp_field_envelope_y_2=torch.mul(disp_field_envelope_y_inv_2,0.5)-torch.mul(disp_field_envelope_y_temp,-0.5)
-    disp_field_envelope_z_2=torch.mul(disp_field_envelope_z_inv_2,0.5)-torch.mul(disp_field_envelope_z_temp,-0.5)
-
-    #multiplying with the factor
-    disp_field_envelope_x*=factor
-    disp_field_envelope_y*=factor
-    disp_field_envelope_z*=factor
-    disp_field_envelope_x_2*=factor
-    disp_field_envelope_y_2*=factor
-    disp_field_envelope_z_2*=factor
-
-    return disp_field_envelope_x,disp_field_envelope_y,disp_field_envelope_z,disp_field_envelope_x_2,disp_field_envelope_y_2,disp_field_envelope_z_2
-
-import math
 
 def interp3_naive(_input, x1, y1, z1, output_size, flag):
     insz_y, insz_x, insz_z = _input.shape
@@ -300,3 +234,61 @@ def interp3_most_naive(
                 +dx*dy*dz*					input[  min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
 
     return interp.reshape(output_shape)
+
+
+def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
+    #u1,v1,w1- deformation field1
+    #u2,v2,w2- deformation field2
+    output_shape=u1.shape
+    factor_inv=1.0/factor
+    u1_temp=torch.mul(u1,factor_inv)
+    v1_temp=torch.mul(v1,factor_inv)
+    w1_temp=torch.mul(w1,factor_inv)
+    u2_temp=torch.mul(u2,factor_inv)
+    v2_temp=torch.mul(v2,factor_inv)
+    w2_temp=torch.mul(w2,factor_inv)
+
+    #interpolatioing field 2 by compositing with field 1..
+    u1=interp3_most_naive(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+    v1=interp3_most_naive(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+    w1=interp3_most_naive(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+
+    #composition
+    u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
+    v1=torch.mul(v1_temp,0.5)+torch.mul(v1,-0.5)
+    w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
+
+    #interpolating field 1 by composition with field2
+    u2=interp3_most_naive(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+    v2=interp3_most_naive(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+    w2=interp3_most_naive(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+
+    #composition
+    u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
+    v2=torch.mul(v2_temp,0.5)+torch.mul(v2,-0.5)
+    w2=torch.mul(w2_temp,0.5)+torch.mul(w2,-0.5)
+
+    #refactoring
+    u1=torch.mul(u1,factor)
+    v1=torch.mul(v1,factor)
+    w1=torch.mul(w1,factor)
+    u2=torch.mul(u2,factor)
+    v2=torch.mul(v2,factor)
+    w2=torch.mul(w2,factor)
+
+    return u1
+
+
+def upsampleDeformationsCL(u1,v1,w1,u,v,w):
+    #u1,v1,w1-flow field
+    #u,v,w-gridded flow field
+    D1,H1,W1=u1.shape
+    D2,H2,W2=u.shape
+    i=D1/D2
+    j=H1/H2
+    k=
+
+
+
+
+
