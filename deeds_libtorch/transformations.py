@@ -22,6 +22,8 @@ def jacobians(x_disp_field, y_disp_field, z_disp_field):
     #   d_y_disp_field/dx  d_y_disp_field/dy  d_y_disp_field/dz
     #   d_z_disp_field/dx  d_z_disp_field/dy  d_z_disp_field/dz
 
+    USE_CONSISTENT_TORCH = False
+
     assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
         "Displacement field sizes must match."
 
@@ -73,10 +75,14 @@ def jacobians(x_disp_field, y_disp_field, z_disp_field):
             disp_field_envelope_z.reshape(1,1,D+2,H,W), Z_WEIGHTS
         ).reshape(D,H,W)
 
-        # TODO Check why d_disp_over_dy and d_disp_over_dx need to be swapped?
-        # This produces same result as deeds but I assume its a mistake.
-        # J<0 count is halved when dx, dy, dz order is used
-        return (d_disp_over_dy, d_disp_over_dx, d_disp_over_dz)
+        if not USE_CONSISTENT_TORCH:
+            # TODO Check why d_disp_over_dy and d_disp_over_dx need to be swapped?
+            # This produces same result as deeds but I assume its a mistake.
+            # J<0 count is halved when dx, dy, dz order is used
+            return (d_disp_over_dy, d_disp_over_dx, d_disp_over_dz)
+
+        return (d_disp_over_dx, d_disp_over_dy, d_disp_over_dz)
+
 
     J11, J12, J13  = jacobians_row_entries(x_disp_field) # First row
     J21, J22, J23  = jacobians_row_entries(y_disp_field) # Second row
