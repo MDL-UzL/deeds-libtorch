@@ -217,7 +217,7 @@ class TestTransformations(unittest.TestCase):
 
 
 
-    def test_naive_interp3(self):
+    def test_interp3(self):
 
         #########################################################
         # Prepare inputs
@@ -259,8 +259,8 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        print("\nRunning torch 'interp3_naive': ")
-        torch_interp3 = self.transformations.interp3_most_naive(
+        print("\nRunning torch 'interp3': ")
+        torch_interp3 = self.transformations.interp3(
             _input,
             x1, y1, z1,
             output_size,
@@ -377,6 +377,6 @@ class TestTransformations(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_naive_interp3()
+    tests.test_interp3()
     # tests.test_volfilter()
     # tests.test_consistentMappingCL()
