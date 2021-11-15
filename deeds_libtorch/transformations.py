@@ -14,7 +14,7 @@ def interp3d(input_img,output_size):#not sure about the output size
     return tri_inter3d
 
 def jacobians(x_disp_field, y_disp_field, z_disp_field):
-    # Returns n=DxHxW jacobian matrices (3x3) of displacements per dimension
+    # Returns outsz_y=DxHxW jacobian matrices (3x3) of displacements per dimension
     #
     # Jacobian for a single data point (x,y,z) is
     #
@@ -265,29 +265,29 @@ def interp3_most_naive(
             output_shape,
 			  flag):
 
-    m2,n2,o2 = input.shape
+    insz_x, insz_y, insz_z = input.shape
 
-    m,n,o =  output_shape
+    outsz_x,outsz_y,outsz_z =  output_shape
 
     interp = torch.zeros(output_shape)
 
-    x1 = x1.reshape(o,n,m).permute(2,1,0)
-    y1 = y1.reshape(o,n,m).permute(2,1,0)
-    z1 = z1.reshape(o,n,m).permute(2,1,0)
+    x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+    y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+    z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
 
-    input = input.reshape(o2,n2,m2).permute(1,2,0)
-    interp = interp.reshape(o,n,m)
+    input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
+    interp = interp.reshape(outsz_z,outsz_y,outsz_x)
 
     def clamp_xyz(x,y,z):
         return (
-            min(max(x,0),n2-1),
-            min(max(y,0),m2-1),
-            min(max(z,0),o2-1)
+            min(max(x,0),insz_y-1),
+            min(max(y,0),insz_x-1),
+            min(max(z,0),insz_z-1)
         )
 
-    for k in range(o):
-        for j in range(n):
-            for i in range(m):
+    for k in range(outsz_z):
+        for j in range(outsz_y):
+            for i in range(outsz_x):
                 x=int(math.floor(x1[i,j,k]))
                 y=int(math.floor(y1[i,j,k]))
                 z=int(math.floor(z1[i,j,k]))
