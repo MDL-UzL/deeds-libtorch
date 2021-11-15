@@ -251,38 +251,44 @@ def interp3_naive(_input, x1, y1, z1, output_size, flag):
 
 
 
-	# 			int x=floor(x1[i+j*m+k*m*n]);
-	# 			int y=floor(y1[i+j*m+k*m*n]);
-	# 			int z=floor(z1[i+j*m+k*m*n]);
-	# 			float dx=x1[i+j*m+k*m*n]-x; float dy=y1[i+j*m+k*m*n]-y; float dz=z1[i+j*m+k*m*n]-z; // dx,dy,dz in gridded flow field relative coordinates
+def interp3_most_naive(
+			 input,
+			 x1, y1, z1,
+            output_shape,
+			  flag):
 
-	# 			if(flag){
-	# 				x+=j; y+=i; z+=k;
-	# 			}
-	# 			//trilinear interpolation: 8x partial cube volume from desired corner point * value of corner point
-	# 			interp[i+j*m+k*m*n]=
-	# 			//partial cube volume		//value at corner
-	# 										//x									//y											//z
-	# 			//clamp
-	# 			//clamping seems to be wrong (x <-> y clamping is mixed)
+    m2,n2,o2 = input.shape
 
-	# 			//							//(0 ... x_interp ... x_idx max)	//(0 ... y_interp ... y_idx max)*x_idx_max	//(0 ... z_interp ... z_idx max)*x_idx_max*y_idx_max
+    m,n,o =  output_shape
+    interp = torch.zeros(output_shape)
 
-	# 			//reziprocal: when dx=1  	we want to have val at idx_x
-	# 			(1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
-	# 			//reziprocal: when dx=0  	we want to have val at idx_x+1
-	# 			+dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
-	# 			+(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]
-	# 			+(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
+    x1 = x1.reshape(-1)
+    y1 = y1.reshape(-1)
+    z1 = z1.reshape(-1)
+    input = input.reshape(-1)
+    interp = interp.reshape(-1)
 
-	# 			+(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]
-	# 			+dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
-	# 			+dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]
-	# 										//3-dim indexing of flattened array
-	# 			+dx*dy*dz*					input[min(max(y+1,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2];
-	# 		}
-	# 	}
-	# }
+    for k in range(o):
+        for j in range(n):
+            for i in range(m):
+                x=int(math.floor(x1[i+j*m+k*m*n]))
+                y=int(math.floor(y1[i+j*m+k*m*n]))
+                z=int(math.floor(z1[i+j*m+k*m*n]))
+                dx=x1[i+j*m+k*m*n]-x
+                dy=y1[i+j*m+k*m*n]-y
+                dz=z1[i+j*m+k*m*n]-z
 
-    interp = interp.permute(0,2,1)
-    return interp
+                if(flag):
+                    x+=j; y+=i; z+=k
+
+                interp[i+j*m+k*m*n]=\
+                (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
+                +dx*(1.0-dy)*(1.0-dz)*		input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
+                +(1.0-dx)*dy*(1.0-dz)*		input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z,0),o2-1)*m2*n2]\
+                +(1.0-dx)*(1.0-dy)*dz*		input[	min(max(y,0),m2-1)			+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
+                +(1.0-dx)*dy*dz*			input[	min(max(y+1,0),m2-1)		+min(max(x,0),n2-1)*m2						+min(max(z+1,0),o2-1)*m2*n2]\
+                +dx*(1.0-dy)*dz*			input[	min(max(y,0),m2-1)			+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]\
+                +dx*dy*(1.0-dz)*			input[	min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z,0),o2-1)*m2*n2]\
+                +dx*dy*dz*					input[  min(max(y+1,0),m2-1)		+min(max(x+1,0),n2-1)*m2					+min(max(z+1,0),o2-1)*m2*n2]
+
+    return interp.reshape(output_shape)

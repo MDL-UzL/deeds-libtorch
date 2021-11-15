@@ -238,7 +238,7 @@ class TestTransformations(unittest.TestCase):
 
         print(_input.shape)
 
-        output_size = (3,2,2)
+        output_size = (1,5,3)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -253,7 +253,7 @@ class TestTransformations(unittest.TestCase):
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
-        flag = False
+        flag = True
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'interp3': ")
@@ -267,7 +267,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'interp3_naive': ")
-        torch_interp3 = self.transformations.interp3_naive(
+        torch_interp3 = self.transformations.interp3_nnnaive(
             _input,
             x1, y1, z1,
             output_size,
