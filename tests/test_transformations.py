@@ -221,17 +221,17 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (4,2,3)
+        input_size = (2,2,3)
         _input = torch.zeros(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
-        _input[1,1-1] = -7.
-        # _input[1,0,0] = .5
-        # _input[1,1,1] = 1.
+        _input[0,1,-1] = -7.
+        _input[0,0,0] = .5
+        _input[0,1,2] = 10.
 
         print(_input.shape)
 
-        output_size = (3,2,6)
+        output_size = (2,4,6)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -378,5 +378,5 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
     tests.test_naive_interp3()
-    tests.test_volfilter()
+    # tests.test_volfilter()
     # tests.test_consistentMappingCL()

@@ -265,20 +265,27 @@ def interp3_most_naive(
             output_shape,
 			  flag):
 
+    USE_CONSISTENT_TORCH = False
     insz_x, insz_y, insz_z = input.shape
-
     outsz_x, outsz_y, outsz_z =  output_shape
-
     interp = torch.zeros(output_shape)
 
-    x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
-    y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
-    z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
-
-    input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
+    if not USE_CONSISTENT_TORCH:
+        x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
+        input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
 
     def clamp_xyz(x,y,z):
+        if USE_CONSISTENT_TORCH:
+            return (
+                min(max(x,0), insz_x-1),
+                min(max(y,0), insz_y-1),
+                min(max(z,0), insz_z-1)
+            )
+
         return (
+            # We have switched index clamping in original implementation
             min(max(x,0),insz_y-1),
             min(max(y,0),insz_x-1),
             min(max(z,0),insz_z-1)
@@ -295,7 +302,15 @@ def interp3_most_naive(
                 dz=z1[i,j,k]-z
 
                 if(flag):
-                    x+=j; y+=i; z+=k
+                    if USE_CONSISTENT_TORCH:
+                        x+=i
+                        y+=j
+                        z+=k
+
+                    else:
+                        x+=j
+                        y+=i
+                        z+=k
 
                 interp[i,j,k]=\
                 (1.0-dx)*(1.0-dy)*(1.0-dz)*	input[clamp_xyz(x, y, z)]\
@@ -307,6 +322,7 @@ def interp3_most_naive(
                 +dx*dy*(1.0-dz)*			input[clamp_xyz(x+1, y+1, z)]\
                 +dx*dy*dz*					input[clamp_xyz(x+1, y+1, z+1)]
 
-    interp = interp.permute(2,1,0).reshape(output_shape)
+    if not USE_CONSISTENT_TORCH:
+        return interp.permute(2,1,0).reshape(output_shape)
 
     return interp
