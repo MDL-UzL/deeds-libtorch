@@ -230,32 +230,46 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     #u2,v2,w2- deformation field2
     output_shape=u1.shape
     factor_inv=1.0/factor
+    epochs=10
     u1_temp=torch.mul(u1,factor_inv)
     v1_temp=torch.mul(v1,factor_inv)
     w1_temp=torch.mul(w1,factor_inv)
     u2_temp=torch.mul(u2,factor_inv)
     v2_temp=torch.mul(v2,factor_inv)
     w2_temp=torch.mul(w2,factor_inv)
+    #iteration required
+    for epoch in range(epochs):
+        print("epoch number:",epoch,end='\n')
+        #interpolatioing field 2 by compositing with field 1..
+        u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+        v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+        w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
 
-    #interpolatioing field 2 by compositing with field 1..
-    u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-    v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-    w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+        #composition
+        u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
+        v1=torch.mul(v1_temp,0.5)+torch.mul(v1,-0.5)
+        w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
 
-    #composition
-    u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
-    v1=torch.mul(v1_temp,0.5)+torch.mul(v1,-0.5)
-    w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
+        #interpolating field 1 by composition with field2
+        u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+        v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+        w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
 
-    #interpolating field 1 by composition with field2
-    u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-    v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-    w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+        #composition
+        u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
+        v2=torch.mul(v2_temp,0.5)+torch.mul(v2,-0.5)
+        w2=torch.mul(w2_temp,0.5)+torch.mul(w2,-0.5)
 
-    #composition
-    u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
-    v2=torch.mul(v2_temp,0.5)+torch.mul(v2,-0.5)
-    w2=torch.mul(w2_temp,0.5)+torch.mul(w2,-0.5)
+        #updating temporary variables
+
+        u1_temp=u1
+        v1_temp=v1
+        w1_temp=w1
+        u2_temp=u2
+        v2_temp=v2
+        w2_temp=w2
+
+    
 
     #refactoring
     u1=torch.mul(u1,factor)
@@ -264,6 +278,7 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     u2=torch.mul(u2,factor)
     v2=torch.mul(v2,factor)
     w2=torch.mul(w2,factor)
+    #print(u1)
 
     return u1, v1, w1, u2, v2, w2
 
@@ -275,4 +290,4 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w):
     D2,H2,W2=u.shape
     i=D1/D2
     j=H1/H2
-    # k=
+    pass
