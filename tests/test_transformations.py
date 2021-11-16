@@ -378,7 +378,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_consistentMappingCL[0], cpp_consistentMappingCL[0],
+        assert torch.allclose(torch_u, deeds_u,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
@@ -392,4 +392,4 @@ if __name__ == '__main__':
     tests.test_consistentMappingCL()
     tests.test_interp3()
     # tests.test_volfilter()
-    # tests.test_consistentMappingCL()
+    tests.test_consistentMappingCL()
