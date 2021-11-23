@@ -133,7 +133,7 @@ int main (int argc, char * const argv[]) {
     //==ALWAYS ALLOCATE MEMORY FOR HEADER ===/
     char* header=new char[352];
 
-    readNifti(args.fixed_file,im1b,header,M,N,O,P);
+    readNifti(args.fixed_file,im1b,header,M,N,O,P); //TODO
     image_m=M; image_n=N; image_o=O;
 
     readNifti(args.moving_file,im1,header,M,N,O,P);
@@ -189,7 +189,7 @@ int main (int argc, char * const argv[]) {
         hw1=args.search_radius[level]; //default 5x4x3x2
 
         float Xinv[16]; float Ident[16]={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
-        qrsolve(Xinv,Xprev,Ident,4,4);
+        qrsolve(Xinv,Xprev,Ident,4,4); //TODO
 
         warpAffine(warped2,im1b,Xinv,m,n,o); //warp fixed
         warpAffine(warped1,im1,Xprev,m,n,o); //warp moving
@@ -203,7 +203,7 @@ int main (int argc, char * const argv[]) {
         if(level==0|prev!=curr){
             // calc mind descriptors for both images
             gettimeofday(&time1, NULL);
-            descriptor(im1_mind,im1,m,n,o,mind_step[level]);//max(min(quant1,2.0f),1.0f)//mind of moving image
+            descriptor(im1_mind,im1,m,n,o,mind_step[level]);//max(min(quant1,2.0f),1.0f)//mind of moving image //TODO
             descriptor(im1b_mind,im1b,m,n,o,mind_step[level]); //mind of fixed image
             gettimeofday(&time2, NULL);
             // save timing
@@ -234,7 +234,7 @@ int main (int argc, char * const argv[]) {
         cout<<"M"<<flush;
         gettimeofday(&time1, NULL);
         //data cost of warped moving with previous affine mat estimation against mind fixed image
-        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,alpha,RAND_SAMPLES);
+        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,alpha,RAND_SAMPLES); //TODO
         //returns costall between mind
         gettimeofday(&time2, NULL);
 
@@ -266,7 +266,7 @@ int main (int argc, char * const argv[]) {
         gettimeofday(&time1, NULL);
 
         // core function:
-        estimateAffine2(X,Xprev,im1b,im1,costall,costall2,step1,quant1,hw1);
+        estimateAffine2(X,Xprev,im1b,im1,costall,costall2,step1,quant1,hw1); //TODO
         //step = grid spacing
         //quantization?
         //hw = search radius
@@ -328,7 +328,7 @@ int main (int argc, char * const argv[]) {
         short* segw=new short[sz];
         fill(segw,segw+sz,0);
 
-        warpAffineS(segw,seg2,X,zero,zero,zero);
+        warpAffineS(segw,seg2,X,zero,zero,zero); //TODO
 
 
         string outputseg;
@@ -337,7 +337,7 @@ int main (int argc, char * const argv[]) {
 
 
 
-        gzWriteSegment(outputseg,segw,header,m,n,o,1);
+        gzWriteSegment(outputseg,segw,header,m,n,o,1); //TODO
     }
 
 

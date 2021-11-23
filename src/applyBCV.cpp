@@ -50,9 +50,9 @@ struct parameters{
 
 #include "imageIOgzType.h"
 #include "transformations.h"
-//#include "primsMST.h"
-//#include "regularisation.h"
-//#include "MINDSSCbox.h"
+// #include "primsMST.h"
+// #include "regularisation.h"
+// #include "MINDSSCbox.h"
 #include "dataCostD.h"
 #include "parseArguments.h"
 
@@ -111,7 +111,7 @@ int main (int argc, char * const argv[]) {
     //==ALWAYS ALLOCATE MEMORY FOR HEADER ===/
     char* header=new char[352];
     //TODO: Read nifti
-    readNifti(args.moving_file,seg2,header,M,N,O,P);
+    readNifti(args.moving_file,seg2,header,M,N,O,P); //TODO
 
     image_m=M; image_n=N; image_o=O;
 
@@ -166,7 +166,7 @@ int main (int argc, char * const argv[]) {
 
     cout<<"=============================================================\n";
 
-    vector<float> flow=readFile<float>(inputflow);
+    vector<float> flow=readFile<float>(inputflow); //TODO
 
     int sz3=flow.size()/3;
     int grid_step=round(pow((float)sz/(float)sz3,0.3333333));
@@ -199,7 +199,7 @@ int main (int argc, char * const argv[]) {
 
     }
     //TODO Upsample, in: full size flow field (returned value), reduced flow field, full dimension image size, reduced flow field size
-    upsampleDeformationsCL(ux,vx,wx,u1,v1,w1,m,n,o,m1,n1,o1);
+    upsampleDeformationsCL(ux,vx,wx,u1,v1,w1,m,n,o,m1,n1,o1); //TODO
 
 
 
@@ -208,11 +208,11 @@ int main (int argc, char * const argv[]) {
     fill(segw,segw+sz,(short)0);
     //TODO warpAffine
     //output segw = seg_warped
-    warpAffineS(segw,seg2,X,ux,vx,wx);
+    warpAffineS(segw,seg2,X,ux,vx,wx); //TODO
 
 
     // TODO Write nifti (p=1 -> 3d image if o > 1), copy header
-    gzWriteSegment(args.deformed_file,segw,header,m,n,o,1);
+    gzWriteSegment(args.deformed_file,segw,header,m,n,o,1); //TODO
 
 
 

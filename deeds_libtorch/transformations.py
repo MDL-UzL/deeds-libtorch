@@ -159,9 +159,8 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
 
 
 
-def interp3(input, x1, y1, z1, output_shape, flag):
+def interp3(input, x1, y1, z1, output_shape, flag, USE_CONSISTENT_TORCH=False):
 
-    USE_CONSISTENT_TORCH = False
     insz_x, insz_y, insz_z = input.shape
     outsz_x, outsz_y, outsz_z =  output_shape
     interp = torch.zeros(output_shape)

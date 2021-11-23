@@ -226,13 +226,13 @@ class TestTransformations(unittest.TestCase):
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
         # _input[0,1,-1] = -7.
-        _input[0,-1,-1] = 10
+        _input[-1,-1,0] = 10
         # _input[0,1,2] = 10.
 
         print("'interp3' input:")
         print(_input)
 
-        output_size = (4,6,3)
+        output_size = (1,5,5)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -240,14 +240,14 @@ class TestTransformations(unittest.TestCase):
         y1 = torch.zeros(output_size)
         z1 = torch.zeros(output_size)
         m, n, o = output_size
-        for k in range(o):
+        for i in range(o):
             for j in range(n):
-                for i in range(m):
-                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
-                    y1[i,j,k]=j/scale_n; # y helper var
-                    z1[i,j,k]=k/scale_o; # z helper var
+                for k in range(m):
+                    x1[k,j,i]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    y1[k,j,i]=j/scale_n; # y helper var
+                    z1[k,j,i]=k/scale_o; # z helper var
 
-        flag = True
+        flag = False
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'interp3': ")
@@ -264,7 +264,7 @@ class TestTransformations(unittest.TestCase):
             torch.Tensor(output_size),
             torch.tensor([not flag], dtype=torch.bool))
 
-        print("\nDifference: ")
+        print("n\Inverted flag output: ")
         print(cpp_interp3_not_flag)
         #########################################################
         # Get torch output
@@ -275,8 +275,18 @@ class TestTransformations(unittest.TestCase):
             output_size,
             flag
         )
-
         print(torch_interp3)
+
+        print("\nRunning torch 'interp3' (USE_CONSISTENT_TORCH=True): ")
+        torch_consistent_interp3 = self.transformations.interp3(
+            _input,
+            x1, y1, z1,
+            output_size,
+            flag,
+            USE_CONSISTENT_TORCH=True
+        )
+
+        print(torch_consistent_interp3)
 
         #########################################################
         # Assert difference
@@ -345,8 +355,8 @@ class TestTransformations(unittest.TestCase):
 
         x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
         x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
-        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
+        # x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
+        # x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
         # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
         # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
         # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
@@ -389,7 +399,7 @@ class TestTransformations(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_consistentMappingCL()
-    tests.test_interp3()
-    # tests.test_volfilter()
     # tests.test_consistentMappingCL()
+    # tests.test_interp3()
+    # tests.test_volfilter()
+    tests.test_consistentMappingCL()
