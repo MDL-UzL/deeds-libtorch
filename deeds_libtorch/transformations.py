@@ -282,7 +282,26 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u1,v1,w1,u,v,w):
+def upsampleDeformationsCL(u1,v1,w1,u,v,w,
+    output_size=None):
+
+    USE_CONSISTENT_TORCH=False
+
+    assert u.dim() == v.dim() == w.dim() == 3,\
+        "Input displacements must be 3-dimensional."
+    assert u.shape == v.shape == w.shape,\
+        "Displacement field sizes must match."
+
+    if USE_CONSISTENT_TORCH:
+        u = u.unsqueeze(0).unsqueeze(0)
+        v = v.unsqueeze(0).unsqueeze(0)
+        w = w.unsqueeze(0).unsqueeze(0)
+        return (
+            torch.nn.functional.upsample(u, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.upsample(v, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.upsample(w, size=output_size, mode='trilinear', align_corners=False)
+        )
+
     #u1,v1,w1-flow field
     #u,v,w-gridded flow field
     u2=u

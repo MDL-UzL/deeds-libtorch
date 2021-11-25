@@ -433,6 +433,7 @@ class TestTransformations(unittest.TestCase):
             self.transformations.upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
+                UPSAMPLED_SIZE
             )
         print(torch_upsampled_u)
 
