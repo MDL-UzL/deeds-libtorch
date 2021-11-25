@@ -364,7 +364,7 @@ class TestTransformations(unittest.TestCase):
             y2_disp_field,
             z2_disp_field,
             torch.tensor([FACTOR], dtype=torch.int))
-
+        print(deeds_u)
 
 
         #########################################################
@@ -373,7 +373,7 @@ class TestTransformations(unittest.TestCase):
         torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
-
+        print(torch_u)
 
 
         #########################################################
@@ -429,8 +429,8 @@ class TestTransformations(unittest.TestCase):
             x2_disp_field,
             y2_disp_field,
             z2_disp_field,
-            )
-
+        )
+        print(deeds_u)
 
 
         #########################################################
@@ -439,7 +439,7 @@ class TestTransformations(unittest.TestCase):
         torch_u, torch_v, torch_w = self.transformations.upsampleDeformationsCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field
         )
-
+        print(torch_u)
 
 
         #########################################################
