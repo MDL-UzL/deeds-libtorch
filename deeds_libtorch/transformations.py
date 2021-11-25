@@ -297,9 +297,9 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w,
         v = v.unsqueeze(0).unsqueeze(0)
         w = w.unsqueeze(0).unsqueeze(0)
         return (
-            torch.nn.functional.upsample(u, size=output_size, mode='trilinear', align_corners=False),
-            torch.nn.functional.upsample(v, size=output_size, mode='trilinear', align_corners=False),
-            torch.nn.functional.upsample(w, size=output_size, mode='trilinear', align_corners=False)
+            torch.nn.functional.interpolate(u, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.interpolate(v, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.interpolate(w, size=output_size, mode='trilinear', align_corners=False)
         )
 
     #u1,v1,w1-flow field
