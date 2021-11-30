@@ -268,10 +268,22 @@ void warpImageCL(float* warped,float* im1,float* im1b,float* u1,float* v1,float*
 }
 
 void warpAffineS(short* warped,short* input,float* X,
-                 float* u1,float* v1,float* w1){ // flow field
-    int m=image_m;
-    int n=image_n;
-    int o=image_o;
+                 float* u1,float* v1,float* w1, int m=image_m, int n=image_n, int o=image_o){ // flow field
+    // int m=image_m;
+    // int n=image_n;
+    // int o=image_o;
+        std::cout<<"\nshort input_img=";
+    for(int pri=0;pri<m*n*o ;pri++){
+		std::cout<<input[pri]<<" ";
+	}
+            std::cout<<"\nfloat X=";
+    for(int pri=0;pri<12 ;pri++){
+		std::cout<<X[pri]<<" ";
+	}
+                std::cout<<"\nfloat u1=";
+    for(int pri=0;pri<m*n*o ;pri++){
+		std::cout<<u1[pri]<<" ";
+	}
     int sz=m*n*o;
     for(int k=0;k<o;k++){
         for(int j=0;j<n;j++){
@@ -296,7 +308,10 @@ void warpAffineS(short* warped,short* input,float* X,
     }
 
     // no distance metric here
-
+                std::cout<<"\nshort warped=";
+    for(int pri=0;pri<m*n*o ;pri++){
+		std::cout<<warped[pri]<<" ";
+	}
 }
 void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float* v1,float* w1){
     int m=image_m;

@@ -53,15 +53,12 @@ class TestdatacostD(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        D, H, W =  2,2,2
+        D, H, W =  3,4,5
 
-   
 
-        input_img=torch.ones((D,H,W),dtype=torch.int16)
-        for i in range(W):
-            if i%2==0:
-                input_img[:,i,i+1]=0
-    
+
+        input_img=torch.arange(D*H*W,dtype=torch.int16).view(D,H,W)
+
         ## Generate some artificial displacements for x,y,z
         x_disp_field = torch.zeros(D,H,W)
         y_disp_field = torch.zeros(D,H,W)
@@ -90,7 +87,7 @@ class TestdatacostD(unittest.TestCase):
 
         #########################################################
         # Assert difference
-        assert torch.allclose(deeds_warped, torch_warped,
+        assert torch.allclose(deeds_warped, torch_warped.short(),
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
