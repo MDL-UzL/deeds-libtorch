@@ -391,9 +391,6 @@ std::tuple<
 std::tuple<
         torch::Tensor,
         torch::Tensor,
-        torch::Tensor,
-        torch::Tensor,
-        torch::Tensor,
         torch::Tensor> applyBCV_upsampleDeformationsCL(
 
     torch::Tensor pInput_u,
@@ -441,16 +438,11 @@ std::tuple<
     return std::tuple<
             torch::Tensor,
             torch::Tensor,
-            torch::Tensor,
-            torch::Tensor,
-            torch::Tensor,
             torch::Tensor>(
         torch::from_blob(new_u.data(), {m,n,o}, options).clone(),
         torch::from_blob(new_v.data(), {m,n,o}, options).clone(),
         torch::from_blob(new_w.data(), {m,n,o}, options).clone()
-        
     );
-
 }
 
 torch::Tensor applyBCV_warpAffineS(
