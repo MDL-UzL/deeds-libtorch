@@ -238,8 +238,8 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     v2_temp=torch.mul(v2,factor_inv)
     w2_temp=torch.mul(w2,factor_inv)
     #iteration required
+
     for epoch in range(epochs):
-        print("epoch number:",epoch,end='\n')
         #interpolatioing field 2 by compositing with field 1..
         u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
         v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
@@ -269,7 +269,7 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
         v2_temp=v2
         w2_temp=w2
 
-    
+
 
     #refactoring
     u1=torch.mul(u1,factor)
@@ -278,12 +278,30 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     u2=torch.mul(u2,factor)
     v2=torch.mul(v2,factor)
     w2=torch.mul(w2,factor)
-    print(u1)
 
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u1,v1,w1,u,v,w):
+def upsampleDeformationsCL(u1,v1,w1,u,v,w,
+    output_size=None):
+
+    USE_CONSISTENT_TORCH=False
+
+    assert u.dim() == v.dim() == w.dim() == 3,\
+        "Input displacements must be 3-dimensional."
+    assert u.shape == v.shape == w.shape,\
+        "Displacement field sizes must match."
+
+    if USE_CONSISTENT_TORCH:
+        u = u.unsqueeze(0).unsqueeze(0)
+        v = v.unsqueeze(0).unsqueeze(0)
+        w = w.unsqueeze(0).unsqueeze(0)
+        return (
+            torch.nn.functional.interpolate(u, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.interpolate(v, size=output_size, mode='trilinear', align_corners=False),
+            torch.nn.functional.interpolate(w, size=output_size, mode='trilinear', align_corners=False)
+        )
+
     #u1,v1,w1-flow field
     #u,v,w-gridded flow field
     u2=u
@@ -307,12 +325,11 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w):
                 X1[i,j,k]=j/scale_h
                 Y1[i,j,k]=k/scale_w
                 Z1[i,j,k]=i/scale_d
-                
+
 
     #interpolating
     u1=interp3(u2,X1,Y1,Z1,(D1,H1,W1),flag=False)
     v1=interp3(v2,X1,Y1,Z1,(D1,H1,W1),flag=False)
     w1=interp3(w2,X1,Y1,Z1,(D1,H1,W1),flag=False)
-    print(u1)
 
     return u1,v1,w1

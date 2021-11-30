@@ -364,7 +364,7 @@ class TestTransformations(unittest.TestCase):
             y2_disp_field,
             z2_disp_field,
             torch.tensor([FACTOR], dtype=torch.int))
-
+        print(deeds_u)
 
 
         #########################################################
@@ -373,7 +373,7 @@ class TestTransformations(unittest.TestCase):
         torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
-
+        print(torch_u)
 
 
         #########################################################
@@ -387,66 +387,70 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 1
-        D, H, W =  6,6,6
-        D2, H2, W2 = 2,2,2
+        INPUT_SIZE = torch.Size((2,2,2))
+        UPSAMPLED_SIZE =  torch.Size((4,4,4))
 
-        DELTA_W = +6.
-        DELTA_H = +2.
-        DELTA_D = +.5
+        DELTA_VAL = +5.
 
-        DELTA_W2 = +7.
-        DELTA_H2 = +3.
-        DELTA_D2 = +.6
+        ## Generate some artificial displacements for x,y,z, fullsize / upsampled
+        SIZE_HELPER_FIELD = torch.zeros(UPSAMPLED_SIZE)
 
-        ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
+        ##Generate input flow field
+        u_input_flow = torch.zeros(INPUT_SIZE)
+        v_input_flow = torch.zeros(INPUT_SIZE)
+        w_input_flow = torch.zeros(INPUT_SIZE)
 
-        ##Generate 2nd flow field
-        x2_disp_field = torch.zeros(D2,H2,W2)
-        y2_disp_field = torch.zeros(D2,H2,W2)
-        z2_disp_field = torch.zeros(D2,H2,W2)
+        u_input_flow[0,0,0] = -2.0*(DELTA_VAL) # u displacement
+        u_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
 
-        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
-        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
-        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
-        # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
-        # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
-        # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
+        v_input_flow[0,0,0] = -3.0*(DELTA_VAL) # u displacement
+        v_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
 
-
+        w_input_flow[1,0,0] = -3.0*(DELTA_VAL) # u displacement
+        w_input_flow[0,0,1] = 5.0*(DELTA_VAL) # u displacement
 
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'upsampleDeformationsCL': ")
-        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = self.applyBCV_module.applyBCV_upsampleDeformationsCL(
-            x_disp_field,
-            y_disp_field,
-            z_disp_field,
-            x2_disp_field,
-            y2_disp_field,
-            z2_disp_field,
+        print("\Input for deeds 'upsampleDeformationsCL': u_input_flow")
+        print(u_input_flow)
+
+        #########################################################
+        # Get deeds output
+        print("\nRunning deeds 'upsampleDeformationsCL': deeds_upsampled_u")
+        (deeds_upsampled_u,
+         deeds_upsampled_v,
+         deeds_upsampled_w) = \
+            self.applyBCV_module.applyBCV_upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow, v_input_flow, w_input_flow,
             )
-
-
+        print(deeds_upsampled_u)
 
         #########################################################
         # Get torch output
-        print("\nRunning torch 'upsampleDeformationsCL': ")
-        torch_u, torch_v, torch_w = self.transformations.upsampleDeformationsCL(
-            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field
-        )
-
-
+        print("\nRunning torch 'upsampleDeformationsCL': torch_upsampled_u")
+        torch_upsampled_u, torch_upsampled_v, torch_upsampled_w = \
+            self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow, v_input_flow, w_input_flow,
+                UPSAMPLED_SIZE
+            )
+        print(torch_upsampled_u)
 
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_u, deeds_u,
+        assert torch.allclose(torch_upsampled_u, deeds_upsampled_u,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
+
+        assert torch.allclose(torch_upsampled_v, deeds_upsampled_v,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
+        assert torch.allclose(torch_upsampled_w, deeds_upsampled_w,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
 
 
 
@@ -455,7 +459,7 @@ class TestTransformations(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_interp3()
-    tests.test_volfilter()
-    tests.test_consistentMappingCL()
+    # tests.test_interp3()
+    # tests.test_volfilter()
+    # tests.test_consistentMappingCL()
     tests.test_upsampleDeformationsCL()
