@@ -149,7 +149,7 @@ void parseCommandLine(parameters& args,int argc, char * const argv[]){
     string s5(correctfile);
     args.affine_file=s5;
     realpathEx(deformedfile,correctfile);
-    string s6(correctfile);
+    string s6(deformedfile);
     args.deformed_file=s6;
 
 
