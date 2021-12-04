@@ -72,7 +72,6 @@ class TestApplyBCV(unittest.TestCase):
         TORCH_APPLY_BCV_OUTPUT_FILE = Path(TEST_BASE_DIR, "./test_output/cpp_apply_bcv_torch_label_output.nii.gz").resolve()
 
         case_args_torch = [
-            sys.argv[0], # Add the name of the calling programm
             '-M', str(MOVING_INPUT_FILE),
             '-O', str(FLOW_INPUT_FILE),
             '-A', str(AFFINE_MATRIX_FILE),
