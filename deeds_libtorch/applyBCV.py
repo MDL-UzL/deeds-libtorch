@@ -74,7 +74,7 @@ def main(argv):
 
     #doing Upsampling for the field
     u1_,v1_,w1_=upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
-    
+
     #warping segmentation
     warped_seg=warpAffineS(mov_img,X,u1_,v1_,w1_)
 
@@ -84,7 +84,6 @@ def main(argv):
     f=open(args.deformed,'w')
     f.write(warped_nii)
     f.close()
-     
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main(sys.argv[1:])
