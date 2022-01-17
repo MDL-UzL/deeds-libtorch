@@ -9,6 +9,7 @@ from transformations import upsampleDeformationsCL
 from datacostD import warpAffineS
 import math
 import nibabel as nib
+import numpy as np
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -26,24 +27,23 @@ def main(argv):
 
     # reading the nifti image-segmentation?
     print("---Reading moving image---")
-    mov_img=read_Nifti(args.moving)#img_tensor of size(D,H,W)
-    D,H,W=mov_img.shape
+    mov_img = read_Nifti(args.moving)
+    D,H,W = mov_img.shape
 
     #reading affine matrix
     if(args.affine_mat):
         print("----Reading affine matrix---")
         X_np=read_File(args.affine_mat)#1d list-reshape to(3,4)
         X=torch.from_numpy(X_np)#converted in to tensor
-        X.reshape(3,4)
+        X=X.reshape(4,4)[:3,:]
     else:
         print("---Using identity transform----")
         X=torch.eye(4,3)#matrix for identity transform
 
     #reading displacement field
     print("---Reading displacement field---")
-    disp_field_np=read_File(args.disp_field)#1d list
-    disp_field=torch.from_numpy(disp_field_np)
-    #disp_field.view(D,H,W)#reshaping in to (D,H,W)
+    disp_field = np.fromfile(args.out_prefix+"_displacements.dat", np.float32)#1d list
+    disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4)
 
     #creating sample grid
     grid_size=torch.numel(disp_field)
@@ -57,33 +57,22 @@ def main(argv):
     wx=torch.zeros((D,H,W))
 
     #creating gridded flow field
-    D1=D/grid_step
-    H1=H/grid_step
-    W1=W/grid_step
-    sz=D1*H1*W1
-    u1=torch.zeros(sz)
-    v1=torch.zeros(sz)
-    w1=torch.zeros(sz)
-    for i in range(sz):
-        u1[i]=disp_field[i]
-        v1[i]=disp_field[i+sz]
-        w1[i]=disp_field[i+sz*2]
-    u1.view(D1,H1,W1)
-    v1.view(D1,H1,W1)
-    w1.view(D1,H1,W1)
+
+
+    u1 = disp_field[0]
+    v1 = disp_field[1]
+    w1 = disp_field[2]
 
     #doing Upsampling for the field
-    u1_,v1_,w1_=upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
+    u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
 
     #warping segmentation
     warped_seg=warpAffineS(mov_img,X,u1_,v1_,w1_)
 
     #writing the warped niftii file
     warped_np=warped_seg.numpy()
-    warped_nii=nib.Nifti2Image(warped_np,affine='None')#to check
-    f=open(args.deformed,'w')
-    f.write(warped_nii)
-    f.close()
+    warped_nii = nib.Nifti2Image(warped_np, affine=np.eye(4))
+    nib.save(warped_nii, args.deformed)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

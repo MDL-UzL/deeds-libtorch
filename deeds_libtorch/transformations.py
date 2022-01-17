@@ -282,8 +282,7 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u1,v1,w1,u,v,w,
-    output_size=None):
+def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, output_size=None):
 
     USE_CONSISTENT_TORCH=False
 
@@ -307,8 +306,8 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w,
     u2=u
     v2=v
     w2=w
-    D1,H1,W1=u1.shape #Full size flow field shape
-    D2,H2,W2=u.shape  #gridded flow field shape
+    D1, H1, W1 = u_out.shape #Full size flow field shape
+    D2, H2, W2 = u.shape  #gridded flow field shape
 
     #scaling
     scale_d=D1/D2
@@ -319,17 +318,17 @@ def upsampleDeformationsCL(u1,v1,w1,u,v,w,
     X1=torch.zeros((D1,H1,W1))
     Y1=torch.zeros((D1,H1,W1))
     Z1=torch.zeros((D1,H1,W1))
-    for k in range(D1):
+    for i in range(D1):
         for j in range(H1):
-            for i in range(W1):
+            for k in range(W1):
                 X1[i,j,k]=j/scale_h
                 Y1[i,j,k]=k/scale_w
                 Z1[i,j,k]=i/scale_d
 
 
     #interpolating
-    u1=interp3(u2,X1,Y1,Z1,(D1,H1,W1),flag=False)
-    v1=interp3(v2,X1,Y1,Z1,(D1,H1,W1),flag=False)
-    w1=interp3(w2,X1,Y1,Z1,(D1,H1,W1),flag=False)
+    u_out = interp3(u2,X1,Y1,Z1,(D1,H1,W1),flag=False)
+    v_out = interp3(v2,X1,Y1,Z1,(D1,H1,W1),flag=False)
+    w_out = interp3(w2,X1,Y1,Z1,(D1,H1,W1),flag=False)
 
-    return u1,v1,w1
+    return u_out, v_out ,w_out

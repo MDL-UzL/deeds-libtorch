@@ -55,7 +55,7 @@ class TestApplyBCV(unittest.TestCase):
 
         TEST_BASE_DIR = Path(THIS_SCRIPT_DIR, "./test_data/case_2").resolve()
         TEST_BASE_DIR.joinpath("test_output").mkdir(exist_ok=True, parents=True)
-        MOVING_INPUT_FILE = Path(TEST_BASE_DIR, "label_toy_nifti_random_DHW_10x20x30.nii.gz").resolve()
+        MOVING_INPUT_FILE = Path(TEST_BASE_DIR, "label_toy_nifti_random_DHW_12x24x36.nii.gz").resolve()
         FLOW_INPUT_FILE = Path(TEST_BASE_DIR, "DHW_12x24x36_flow_dim_3x6x9_zero").resolve() # Resolves to "zero_flow_displacements.dat"
         AFFINE_MATRIX_FILE = Path(TEST_BASE_DIR, "identity_affine_matrix.txt").resolve()
 
@@ -90,8 +90,8 @@ class TestApplyBCV(unittest.TestCase):
         # Assert difference
 
         # Load files from disk again
-        cpp_warped = nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata()
-        torch_warped = nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata()
+        cpp_warped = torch.tensor(nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata())
+        torch_warped = torch.tensor(nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata())
 
         assert torch.allclose(cpp_warped, torch_warped,
             rtol=1e-05, atol=1e-08, equal_nan=False

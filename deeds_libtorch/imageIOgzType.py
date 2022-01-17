@@ -16,23 +16,13 @@ def read_Nifti(path):
         return img_tensor
     else:
         print('Read file error-Did not find' + path)
-    
 
-    
+
+
 
 def read_File(path):
     if os.path.exists(path):
-        fn=open(path,'rb')
-        flow_field=np.fromfile(fn,dtype=np.float32) #returns a 1d list- need reshaping
+        flow_field=np.fromfile(path,dtype=np.float32, sep=" ") #returns a 1d list- need reshaping
         return flow_field
     else:
         print('Read file error-Did not find' + path)
-
-
-
-
-
-    
-
-
-
