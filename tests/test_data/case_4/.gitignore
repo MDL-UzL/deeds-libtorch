@@ -1,0 +1,5 @@
+*.nii.gz
+
+deeds_bcv_output/moving_deformed.nii.gz
+apply_bcv_output/moving_label_deformed.nii.gz
+apply_bcv_float_output/moving_deformed.nii.gz
