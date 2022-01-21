@@ -4,9 +4,34 @@ import importlib.util
 from pathlib import Path
 import torch
 from torch.utils.cpp_extension import load
-
+import time
+import timeit
+import numpy as np
+import nibabel as nib
 os.environ['USE_JIT_COMPILE'] = '1'
 THIS_SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+def read_Nifti(path):
+    #function to read a niftii file
+    #returns-Tensor
+    if os.path.exists(path):
+        image=nib.load(path)
+        np_img=np.array(image.dataobj)
+        img_tensor=torch.from_numpy(np_img)
+        return img_tensor
+    else:
+        print('Read file error-Did not find' + path)
+
+
+def read_File(path):
+    if os.path.exists(path):
+        flow_field=np.fromfile(path,dtype=np.float32, sep=" ") #returns a 1d list- need reshaping
+        return flow_field
+    else:
+        print('Read file error-Did not find' + path)
+
+
+
 
 def load_module_from_path(_path):
     # See https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path?rq=1
@@ -28,6 +53,7 @@ class TestTransformations(unittest.TestCase):
         # Load transformations.py
         transformations_py_file = Path(deeds_libtorch_dir, "transformations.py")
         self.transformations = load_module_from_path(transformations_py_file)
+        self.device=torch.device('cpu')#to switch between cpu and gpu cores
 
         # Load build output
         src_dir = Path(THIS_SCRIPT_DIR, "../src").resolve()
@@ -169,6 +195,7 @@ class TestTransformations(unittest.TestCase):
         DELTA_H2 = +3.
         DELTA_D2 = +.6
 
+
         ## Generate some artificial displacements for x,y,z
         x_disp_field = torch.zeros(D,H,W)
         y_disp_field = torch.zeros(D,H,W)
@@ -203,9 +230,11 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'std_det_jacobians': ")
+        start=time.time()
         torch_consistentMappingCL = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
+        print('time taken to execute the function consistent mapping: %s sec' %(time.time()-start))
 
 
 
@@ -323,7 +352,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Prepare inputs
         FACTOR = 1
-        D, H, W =  6, 6, 2
+        #D, H, W =  6, 6, 2
 
         DELTA_W = +6.
         DELTA_H = +2.
@@ -333,26 +362,34 @@ class TestTransformations(unittest.TestCase):
         DELTA_H2 = +3.
         DELTA_D2 = +.6
 
+        #to store in c
+
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
+        #consistent mapping time testing
+        path_img='tests/test_data/case_2/label_toy_nifti_random_DHW_12x24x36.nii.gz'
+        flow_field_path='tests/test_data/case_2/DHW_12x24x36_flow_dim_3x6x9_zero_displacements.dat'
+        input_img=read_Nifti(path_img).to(self.device)
+        D,H,W=input_img.shape
+        disp_field=np.fromfile(flow_field_path,np.float32)
+        disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
+        x_disp_field = disp_field[0]   #torch.zeros(D,H,W)
+        y_disp_field = disp_field[1]   #torch.zeros(D,H,W)
+        z_disp_field = disp_field[2]  #torch.zeros(D,H,W)
 
         ##Generate 2nd flow field
-        x2_disp_field = torch.zeros(D,H,W)
-        y2_disp_field = torch.zeros(D,H,W)
-        z2_disp_field = torch.zeros(D,H,W)
+        x2_disp_field =     torch.flip(disp_field[0],[0,1])
+        y2_disp_field =     torch.flip(disp_field[1],[0,1])
+        z2_disp_field =     torch.flip(disp_field[2],[0,1])
 
-        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
-        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
-        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
+        #x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
+        #x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
+        #x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
+        #x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
         # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
         # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
         # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
 
-
-
+        
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'consistentMappingCL': ")
@@ -370,10 +407,34 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'consistent mapping': ")
+
         torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
+        
         print(torch_u)
+
+        ########-----TIME CALCULATION-----########
+
+        print("\nRunning speed test:pytorch")
+        statement_py=self.transformations.consistentMappingCL(
+            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
+        )
+        timesy=timeit.Timer(lambda:statement_py).timeit()
+        print("Time elapsed:%s sec" %timesy)
+
+        print("\nRunning speed test:CPP")
+        statement_cpp=self.applyBCV_module.applyBCV_consistentMappingCL(
+            x_disp_field,
+            y_disp_field,
+            z_disp_field,
+            x2_disp_field,
+            y2_disp_field,
+            z2_disp_field,
+            torch.tensor([FACTOR], dtype=torch.int))
+        timecp=timeit.Timer(lambda:statement_cpp).timeit()
+        print("Time elapsed:%s sec" %timecp)
+
 
 
         #########################################################
@@ -387,27 +448,36 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        INPUT_SIZE = torch.Size((2,2,2))
-        UPSAMPLED_SIZE =  torch.Size((4,4,4))
+        INPUT_SIZE = torch.Size((3,6,9))
+        UPSAMPLED_SIZE =  torch.Size((44,34,46))
 
         DELTA_VAL = +5.
 
         ## Generate some artificial displacements for x,y,z, fullsize / upsampled
         SIZE_HELPER_FIELD = torch.zeros(UPSAMPLED_SIZE)
 
+        path_img='tests/test_data/case_4/label_moving_50_percent.nii.gz'
+        flow_field_path='tests/test_data/case_4/deeds_bcv_output/case_4_displacements.dat'
+        input_img=read_Nifti(path_img).to(self.device)
+        D,H,W = input_img.shape
+        disp_field=np.fromfile(flow_field_path,np.float32)
+        disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
+        print('\ndisp_field size',disp_field[0].shape)
+
+
         ##Generate input flow field
-        u_input_flow = torch.zeros(INPUT_SIZE)
-        v_input_flow = torch.zeros(INPUT_SIZE)
-        w_input_flow = torch.zeros(INPUT_SIZE)
+        u_input_flow = disp_field[0]  #torch.zeros(INPUT_SIZE)
+        v_input_flow = disp_field[1] #torch.zeros(INPUT_SIZE)
+        w_input_flow = disp_field[2] #torch.zeros(INPUT_SIZE)
 
-        u_input_flow[0,0,0] = -2.0*(DELTA_VAL) # u displacement
-        u_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
+        #u_input_flow[0,0,0] = -2.0*(DELTA_VAL) # u displacement
+        #u_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
 
-        v_input_flow[0,0,0] = -3.0*(DELTA_VAL) # u displacement
-        v_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
+        #v_input_flow[0,0,0] = -3.0*(DELTA_VAL) # u displacement
+        #v_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
 
-        w_input_flow[1,0,0] = -3.0*(DELTA_VAL) # u displacement
-        w_input_flow[0,0,1] = 5.0*(DELTA_VAL) # u displacement
+        #w_input_flow[1,0,0] = -3.0*(DELTA_VAL) # u displacement
+        #w_input_flow[0,0,1] = 5.0*(DELTA_VAL) # u displacement
 
         #########################################################
         # Get deeds output
@@ -437,6 +507,23 @@ class TestTransformations(unittest.TestCase):
             )
         print(torch_upsampled_u)
 
+        ##############---TIME CALCULATION------#########
+        print("\nRunning speed test:pytorch")
+        statement_py=self.transformations.upsampleDeformationsCL(SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,u_input_flow, v_input_flow, w_input_flow,UPSAMPLED_SIZE)
+        timesy=timeit.Timer(lambda:statement_py).timeit()
+        print("Time elapsed:%s sec" %timesy)
+
+        print("\nRunning speed test:CPP")
+        statement_cpp=self.applyBCV_module.applyBCV_upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow, v_input_flow, w_input_flow,
+            )
+        timecp=timeit.Timer(lambda:statement_cpp).timeit()
+        print("Time elapsed:%s sec" %timecp)
+
+    
+
+
         #########################################################
         # Assert difference
         assert torch.allclose(torch_upsampled_u, deeds_upsampled_u,
@@ -450,9 +537,7 @@ class TestTransformations(unittest.TestCase):
         assert torch.allclose(torch_upsampled_w, deeds_upsampled_w,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
-
-
-
+    
 
 
 
@@ -461,5 +546,5 @@ if __name__ == '__main__':
     tests = TestTransformations()
     # tests.test_interp3()
     # tests.test_volfilter()
-    # tests.test_consistentMappingCL()
-    tests.test_upsampleDeformationsCL()
+    tests.test_consistentMappingCL()
+    #tests.test_upsampleDeformationsCL()

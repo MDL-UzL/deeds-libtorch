@@ -1,4 +1,6 @@
 import sys
+
+from torch._C import device
 sys.path.append('./deeds_libtorch')
 import os
 import argparse
@@ -10,7 +12,8 @@ from datacostD import warpAffineS
 import math
 import nibabel as nib
 import numpy as np
-
+from timeit import default_timer as timer
+import time
 def main(argv):
     parser = argparse.ArgumentParser()
 
@@ -25,16 +28,19 @@ def main(argv):
     print(args.deformed)
     print(args.affine_mat)
 
+    #To run in cuda or cpu
+    device=torch.device('cpu')
+
     # reading the nifti image-segmentation?
     print("---Reading moving image---")
-    mov_img = read_Nifti(args.moving)
+    mov_img = read_Nifti(args.moving).to(device)
     D,H,W = mov_img.shape
 
     #reading affine matrix
     if(args.affine_mat):
         print("----Reading affine matrix---")
         X_np=read_File(args.affine_mat)#1d list-reshape to(3,4)
-        X=torch.from_numpy(X_np)#converted in to tensor
+        X=torch.from_numpy(X_np).to(device)#converted in to tensor
         X=X.reshape(4,4)[:3,:]
     else:
         print("---Using identity transform----")
@@ -43,7 +49,7 @@ def main(argv):
     #reading displacement field
     print("---Reading displacement field---")
     disp_field = np.fromfile(args.out_prefix+"_displacements.dat", np.float32)#1d list
-    disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4)
+    disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(device)
 
     #creating sample grid
     grid_size=torch.numel(disp_field)
@@ -65,14 +71,17 @@ def main(argv):
 
     #doing Upsampling for the field
     u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
+    
 
     #warping segmentation
-    warped_seg=warpAffineS(mov_img,X,u1_,v1_,w1_)
+    start_2=time.time()
+    warped_seg=warpAffineS(mov_img,X,u1_,v1_,w1_).to(device)
+    print('time taken warp_seg: %s sec' %(time.time()-start_2))
 
     #writing the warped niftii file
     warped_np=warped_seg.numpy()
-    warped_nii = nib.Nifti2Image(warped_np, affine=np.eye(4))
-    nib.save(warped_nii, args.deformed)
+    warped_nii = nib.Nifti1Image(warped_np, affine=np.eye(4,4))
+    nib.save(warped_nii,args.deformed)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -7,6 +7,7 @@ from pathlib import Path
 import torch
 from torch.utils.cpp_extension import load
 import nibabel as nib
+import torch.nn.functional as F
 
 os.environ['USE_JIT_COMPILE'] = '1'
 THIS_SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -50,6 +51,9 @@ class TestApplyBCV(unittest.TestCase):
             # Use a precompiled library. For this the source needs to contain a 'TORCH_LIBRARY' definition
             torch.ops.load_library(apply_bcv_dylib)
             self.applyBCV_module = torch.ops.deeds_applyBCV
+    
+   
+ 
 
     def test_main_case_two(self):
 
@@ -96,8 +100,105 @@ class TestApplyBCV(unittest.TestCase):
         assert torch.allclose(cpp_warped, torch_warped,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
+    
+    #test for more image datas
+    def test_main_case_three(self):
 
+        TEST_BASE_DIR = Path(THIS_SCRIPT_DIR, "./test_data/case_3").resolve()
+        TEST_BASE_DIR.joinpath("linear_bcv_output").mkdir(exist_ok=True, parents=True)
+        MOVING_INPUT_FILE = Path(TEST_BASE_DIR, "moving.nii.gz").resolve()
+        FLOW_INPUT_FILE = Path(TEST_BASE_DIR, "case_3").resolve() # Resolves to "zero_flow_displacements.dat"
+        AFFINE_MATRIX_FILE = Path(TEST_BASE_DIR, "linear_bcv_affine_matrix.txt").resolve()
 
+        CPP_APPLY_BCV_OUTPUT_FILE = Path(TEST_BASE_DIR, "./linear_bcv_output/cpp_apply_bcv_label_output.nii.gz").resolve()
+
+        case_args_cpp = [
+            sys.argv[0], # Add the name of the calling programm
+            '-M', str(MOVING_INPUT_FILE),
+            '-O', str(FLOW_INPUT_FILE),
+            '-A', str(AFFINE_MATRIX_FILE),
+            '-D', str(CPP_APPLY_BCV_OUTPUT_FILE),
+        ]
+
+        TORCH_APPLY_BCV_OUTPUT_FILE = Path(TEST_BASE_DIR, "./linear_bcv_output/cpp_apply_bcv_torch_label_output.nii.gz").resolve()
+
+        case_args_torch = [
+            '-M', str(MOVING_INPUT_FILE),
+            '-O', str(FLOW_INPUT_FILE),
+            '-A', str(AFFINE_MATRIX_FILE),
+            '-D', str(TORCH_APPLY_BCV_OUTPUT_FILE),
+        ]
+
+        #########################################################
+        # Write deeds output to harddrive
+        self.applyBCV_module.applyBCV_main(len(case_args_cpp), case_args_cpp)
+
+        #########################################################
+        # Write torch output to harddrive
+        self.applyBCV.main(case_args_torch)
+
+        #########################################################
+        # Assert difference
+
+        # Load files from disk again
+        cpp_warped = torch.tensor(nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata())
+        torch_warped = torch.tensor(nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata())
+
+        assert torch.allclose(cpp_warped, torch_warped,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+    
+
+    def test_main_case_four(self):
+
+        TEST_BASE_DIR = Path(THIS_SCRIPT_DIR, "./test_data/case_4").resolve()
+        TEST_BASE_DIR.joinpath("linear_bcv_output").mkdir(exist_ok=True, parents=True)
+        MOVING_INPUT_FILE = Path(TEST_BASE_DIR, "label_moving_50_percent.nii.gz").resolve()
+        FLOW_INPUT_FILE = Path(TEST_BASE_DIR, "case_4").resolve() # Resolves to "zero_flow_displacements.dat"
+        AFFINE_MATRIX_FILE = Path(TEST_BASE_DIR, "linear_bcv_affine_matrix.txt").resolve()
+
+        CPP_APPLY_BCV_OUTPUT_FILE = Path(TEST_BASE_DIR, "./linear_bcv_output/cpp_apply_bcv_label_output.nii.gz").resolve()
+
+        case_args_cpp = [
+            sys.argv[0], # Add the name of the calling programm
+            '-M', str(MOVING_INPUT_FILE),
+            '-O', str(FLOW_INPUT_FILE),
+            '-A', str(AFFINE_MATRIX_FILE),
+            '-D', str(CPP_APPLY_BCV_OUTPUT_FILE),
+        ]
+
+        TORCH_APPLY_BCV_OUTPUT_FILE = Path(TEST_BASE_DIR, "./linear_bcv_output/cpp_apply_bcv_torch_label_output.nii.gz").resolve()
+
+        case_args_torch = [
+            '-M', str(MOVING_INPUT_FILE),
+            '-O', str(FLOW_INPUT_FILE),
+            '-A', str(AFFINE_MATRIX_FILE),
+            '-D', str(TORCH_APPLY_BCV_OUTPUT_FILE),
+        ]
+
+        #########################################################
+        # Write deeds output to harddrive
+        self.applyBCV_module.applyBCV_main(len(case_args_cpp), case_args_cpp)
+
+        #########################################################
+        # Write torch output to harddrive
+        self.applyBCV.main(case_args_torch)
+
+        #########################################################
+        # Assert difference
+
+        # Load files from disk again
+        cpp_warped = torch.tensor(nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata())
+        torch_warped = torch.tensor(nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata())
+
+        assert torch.allclose(cpp_warped, torch_warped,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+    
+
+  
 if __name__ == '__main__':
     tests = TestApplyBCV()
     tests.test_main_case_two()
+    #tests.test_main_case_three()
+    #tests.test_main_case_four()
