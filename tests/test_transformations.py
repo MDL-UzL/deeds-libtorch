@@ -389,7 +389,7 @@ class TestTransformations(unittest.TestCase):
         # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
         # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
 
-        
+
         #########################################################
         # Get deeds output
         print("\nRunning deeds 'consistentMappingCL': ")
@@ -411,7 +411,7 @@ class TestTransformations(unittest.TestCase):
         torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
         )
-        
+
         print(torch_u)
 
         ########-----TIME CALCULATION-----########
@@ -464,7 +464,7 @@ class TestTransformations(unittest.TestCase):
         disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
         print('\ndisp_field size',disp_field[0].shape)
 
-
+        torch.set_printoptions(precision=4, sci_mode=False)
         ##Generate input flow field
         u_input_flow = disp_field[0]  #torch.zeros(INPUT_SIZE)
         v_input_flow = disp_field[1] #torch.zeros(INPUT_SIZE)
@@ -507,6 +507,12 @@ class TestTransformations(unittest.TestCase):
             )
         print(torch_upsampled_u)
 
+        #########################################################
+        # Assert difference
+        assert torch.allclose(torch_upsampled_u, deeds_upsampled_u,
+            rtol=1e-05, atol=1e-08, equal_nan=False
+        ), "Tensors do not match"
+
         ##############---TIME CALCULATION------#########
         print("\nRunning speed test:pytorch")
         statement_py=self.transformations.upsampleDeformationsCL(SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,u_input_flow, v_input_flow, w_input_flow,UPSAMPLED_SIZE)
@@ -521,7 +527,7 @@ class TestTransformations(unittest.TestCase):
         timecp=timeit.Timer(lambda:statement_cpp).timeit()
         print("Time elapsed:%s sec" %timecp)
 
-    
+
 
 
         #########################################################
@@ -537,7 +543,7 @@ class TestTransformations(unittest.TestCase):
         assert torch.allclose(torch_upsampled_w, deeds_upsampled_w,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
-    
+
 
 
 
@@ -546,5 +552,5 @@ if __name__ == '__main__':
     tests = TestTransformations()
     # tests.test_interp3()
     # tests.test_volfilter()
-    tests.test_consistentMappingCL()
-    #tests.test_upsampleDeformationsCL()
+    # tests.test_consistentMappingCL()
+    tests.test_upsampleDeformationsCL()
