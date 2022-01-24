@@ -159,9 +159,8 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
 
 
 
-def interp3(input, x1, y1, z1, output_shape, flag):
+def interp3(input, x1, y1, z1, output_shape, flag, USE_CONSISTENT_TORCH=False):
 
-    USE_CONSISTENT_TORCH = False
     insz_x, insz_y, insz_z = input.shape
     outsz_x, outsz_y, outsz_z =  output_shape
     interp = torch.zeros(output_shape)
@@ -171,6 +170,8 @@ def interp3(input, x1, y1, z1, output_shape, flag):
         y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
+    else:
+        return torch.nn.functional.interpolate(input.unsqueeze(0).unsqueeze(0), size=output_shape).squeeze(0).squeeze(0)
 
     def clamp_xyz(x,y,z):
         if USE_CONSISTENT_TORCH:
@@ -225,7 +226,7 @@ def interp3(input, x1, y1, z1, output_shape, flag):
 
 
 
-def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
+def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
     #u1,v1,w1- deformation field1
     #u2,v2,w2- deformation field2
     output_shape=u1.shape
@@ -241,9 +242,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
 
     for epoch in range(epochs):
         #interpolatioing field 2 by compositing with field 1..
-        u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-        v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
-        w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True)
+        u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
 
         #composition
         u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
@@ -251,9 +252,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
         w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
 
         #interpolating field 1 by composition with field2
-        u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-        v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
-        w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True)
+        u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
 
         #composition
         u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
@@ -282,9 +283,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor):
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, output_size=None):
+def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, output_size=None, USE_CONSISTENT_TORCH=False):
 
-    USE_CONSISTENT_TORCH=False
+    # USE_CONSISTENT_TORCH=True
 
     assert u.dim() == v.dim() == w.dim() == 3,\
         "Input displacements must be 3-dimensional."

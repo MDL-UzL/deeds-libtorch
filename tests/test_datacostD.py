@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import torch
 from torch.utils.cpp_extension import load
+import timeit
 
 os.environ['USE_JIT_COMPILE'] = '1'
 THIS_SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -83,6 +84,15 @@ class TestdatacostD(unittest.TestCase):
         print("\nRunning torch 'warpAffineS': ")
         torch_warped = self.datacostD.warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field)
 
+        ###
+        # Test timing
+        deeds_func = lambda: self.applyBCV_module.applyBCV_warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field)
+        torch_func_optimized = lambda: self.datacostD.warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field)
+        # torch_func_optimized_gpu = lambda: self.datacostD.warpAffineS(input_img.cuda(),T.cuda(),x_disp_field.cuda(),y_disp_field.cuda(),z_disp_field.cuda())
+
+        times_deeds = timeit.timeit(deeds_func, number=100)
+        times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
+        times_torch_optimized_gpu = timeit.timeit(torch_func_optimized_gpu, number=100)
 
 
         #########################################################

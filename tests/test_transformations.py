@@ -317,7 +317,7 @@ class TestTransformations(unittest.TestCase):
     def test_volfilter(self):
             #########################################################
         # Prepare inputs
-        input_size = (3,3,3)
+        input_size = (50,50,50)
         _input = torch.randn(input_size)
         print("input is",_input)
         # _input[0,0,0] = 0
@@ -339,6 +339,18 @@ class TestTransformations(unittest.TestCase):
         print("\nRunning torch 'vol_filter': ")
         torch_volfilter = self.transformations.vol_filter(_input,kernel_sz,sigma)
         print("Vol_filter is:",torch_volfilter)
+
+
+        ###########
+        # Check timimg
+        deeds_func = lambda: self.applyBCV_module.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
+        torch_optimized_func = lambda: self.transformations.vol_filter(_input,kernel_sz,sigma)
+        torch_optimized_func_gpu = lambda: self.transformations.vol_filter(_input.cuda(),kernel_sz,sigma)
+
+        times_deeds = timeit.timeit(deeds_func, number=100)
+        times_torch_optimized = timeit.timeit(torch_optimized_func, number=100)
+        times_torch_optimized_gpu = timeit.timeit(torch_optimized_func_gpu, number=100)
+
         #########################################################
         # Assert difference
         assert torch.allclose(torch_volfilter, cpp_volfilter,
@@ -417,10 +429,33 @@ class TestTransformations(unittest.TestCase):
         ########-----TIME CALCULATION-----########
 
         print("\nRunning speed test:pytorch")
-        statement_py=self.transformations.consistentMappingCL(
+        deeds_func = lambda: self.applyBCV_module.applyBCV_consistentMappingCL(
+            x_disp_field,
+            y_disp_field,
+            z_disp_field,
+            x2_disp_field,
+            y2_disp_field,
+            z2_disp_field,
+            torch.tensor([FACTOR], dtype=torch.int)
+            )
+        torch_func_non_optimized = lambda: self.transformations.consistentMappingCL(
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
-        )
-        timesy=timeit.Timer(lambda:statement_py).timeit()
+            )
+        torch_func_optimized = lambda: self.transformations.consistentMappingCL(
+            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR,
+            USE_CONSISTENT_TORCH=True
+            )
+        # timesy=timeit.Timer(lambda:statement_py).timeit()
+
+        times_deeds = timeit.timeit(deeds_func, number=100)
+        times_torch_non_optimized = timeit.timeit(torch_func_non_optimized, number=1)
+        times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
+        times_torch_optimized_gpu = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow.cuda(), v_input_flow.cuda(), w_input_flow.cuda(),
+                UPSAMPLED_SIZE.cuda(), USE_CONSISTENT_TORCH=True), number=100)
+        print(torch_upsampled_u)
+
         print("Time elapsed:%s sec" %timesy)
 
         print("\nRunning speed test:CPP")
@@ -499,12 +534,28 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get torch output
         print("\nRunning torch 'upsampleDeformationsCL': torch_upsampled_u")
-        torch_upsampled_u, torch_upsampled_v, torch_upsampled_w = \
-            self.transformations.upsampleDeformationsCL(
+        # torch_upsampled_u, torch_upsampled_v, torch_upsampled_w = \
+        #     self.transformations.upsampleDeformationsCL(
+        #         SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+        #         u_input_flow, v_input_flow, w_input_flow,
+        #         UPSAMPLED_SIZE
+        #     )
+        times_deeds = timeit.timeit(lambda:self.applyBCV_module.applyBCV_upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
-                UPSAMPLED_SIZE
-            )
+            ),number=100)
+        times_torch_non_optimized = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow, v_input_flow, w_input_flow,
+                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=False), number=1)
+        times_torch_optimized = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow, v_input_flow, w_input_flow,
+                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=True), number=100)
+        times_torch_optimized_gpu = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+                u_input_flow.cuda(), v_input_flow.cuda(), w_input_flow.cuda(),
+                UPSAMPLED_SIZE.cuda(), USE_CONSISTENT_TORCH=True), number=100)
         print(torch_upsampled_u)
 
         #########################################################
@@ -551,6 +602,6 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
     # tests.test_interp3()
-    # tests.test_volfilter()
+    tests.test_volfilter()
     # tests.test_consistentMappingCL()
-    tests.test_upsampleDeformationsCL()
+    # tests.test_upsampleDeformationsCL()
