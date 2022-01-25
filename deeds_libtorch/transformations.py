@@ -143,7 +143,7 @@ def gaussian_filter(kernel_size,sigma,dim=3):
 
 def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
     #returns a gaussian smooth image
-    weights=gaussian_filter(kernel_sz,sigma)
+    weights=gaussian_filter(kernel_sz,sigma).to(device=image_in.device)
     if dim==1:
         conv=F.conv1d
     elif dim==2:
@@ -163,9 +163,10 @@ def interp3(input, x1, y1, z1, output_shape, flag, USE_CONSISTENT_TORCH=False):
 
     insz_x, insz_y, insz_z = input.shape
     outsz_x, outsz_y, outsz_z =  output_shape
-    interp = torch.zeros(output_shape)
+
 
     if not USE_CONSISTENT_TORCH:
+        interp = torch.zeros(output_shape)
         x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)

@@ -42,8 +42,8 @@ class TestdatacostD(unittest.TestCase):
 
         if os.environ.get('USE_JIT_COMPILE', None) == '1':
             # Use just in time compilation. For this the source needs to contain a 'PYBIND11_MODULE' definition
-            self.applyBCV_module = load(name="applyBCV_module", sources=[apply_bcv_source], build_directory=build_jit_dir)
-
+            # self.applyBCV_module = load(name="applyBCV_module", sources=[apply_bcv_source], build_directory=build_jit_dir)
+            pass
         else:
             # Use a precompiled library. For this the source needs to contain a 'TORCH_LIBRARY' definition
             torch.ops.load_library(apply_bcv_dylib)
@@ -54,17 +54,19 @@ class TestdatacostD(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        D, H, W =  3,4,5
+        sz=256
+        D, H, W =  sz, sz,sz
 
 
 
-        input_img=torch.arange(D*H*W,dtype=torch.int16).view(D,H,W)
+        input_img=torch.rand(D*H*W).view(D,H,W)
 
         ## Generate some artificial displacements for x,y,z
         x_disp_field = torch.zeros(D,H,W)
         y_disp_field = torch.zeros(D,H,W)
         z_disp_field = torch.zeros(D,H,W)
         T=torch.eye(3,4)
+        T=T+torch.rand_like(T)*.01
 
 
          # u displacement
@@ -73,9 +75,9 @@ class TestdatacostD(unittest.TestCase):
 
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'warpAffineS': ")
-        deeds_warped= self.applyBCV_module.applyBCV_warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field
-            )
+        # print("\nRunning deeds 'warpAffineS': ")
+        # deeds_warped= self.applyBCV_module.applyBCV_warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field
+        #     )
 
 
 
@@ -88,10 +90,17 @@ class TestdatacostD(unittest.TestCase):
         # Test timing
         deeds_func = lambda: self.applyBCV_module.applyBCV_warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field)
         torch_func_optimized = lambda: self.datacostD.warpAffineS(input_img,T,x_disp_field,y_disp_field,z_disp_field)
-        # torch_func_optimized_gpu = lambda: self.datacostD.warpAffineS(input_img.cuda(),T.cuda(),x_disp_field.cuda(),y_disp_field.cuda(),z_disp_field.cuda())
 
-        times_deeds = timeit.timeit(deeds_func, number=100)
-        times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
+        input_img_cuda = input_img.cuda()
+        T_cuda = T.cuda()
+        x_disp_field_cuda = x_disp_field.cuda()
+        y_disp_field_cuda = y_disp_field.cuda()
+        z_disp_field_cuda = z_disp_field.cuda()
+
+        torch_func_optimized_gpu = lambda: self.datacostD.warpAffineS(input_img_cuda,T_cuda,x_disp_field_cuda,y_disp_field_cuda,z_disp_field_cuda)
+
+        # times_deeds = timeit.timeit(deeds_func, number=100)
+        # times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
         times_torch_optimized_gpu = timeit.timeit(torch_func_optimized_gpu, number=100)
 
 

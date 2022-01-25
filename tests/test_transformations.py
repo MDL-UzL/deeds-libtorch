@@ -71,9 +71,9 @@ class TestTransformations(unittest.TestCase):
 
         else:
             # Use a precompiled library. For this the source needs to contain a 'TORCH_LIBRARY' definition
-            torch.ops.load_library(apply_bcv_dylib)
-            self.applyBCV_module = torch.ops.deeds_applyBCV
-
+            # torch.ops.load_library(apply_bcv_dylib)
+            # self.applyBCV_module = torch.ops.deeds_applyBCV
+            pass
 
 
     def test_jacobian(self):
@@ -250,8 +250,9 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (1,3,3)
-        _input = torch.zeros(input_size)
+        sz = 32
+        input_size = (sz,sz,sz)
+        _input = torch.rand(input_size)
         # _input[0,0,0] = 0
         _input[0,0,0] = 1.
         # _input[0,1,-1] = -7.
@@ -261,7 +262,7 @@ class TestTransformations(unittest.TestCase):
         print("'interp3' input:")
         print(_input)
 
-        output_size = (4,6,3)
+        output_size = (2*sz,2*sz,2*sz)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -269,43 +270,81 @@ class TestTransformations(unittest.TestCase):
         y1 = torch.zeros(output_size)
         z1 = torch.zeros(output_size)
         m, n, o = output_size
-        for k in range(o):
-            for j in range(n):
-                for i in range(m):
-                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
-                    y1[i,j,k]=j/scale_n; # y helper var
-                    z1[i,j,k]=k/scale_o; # z helper var
+        # for k in range(o):
+        #     for j in range(n):
+        #         for i in range(m):
+        #             x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+        #             y1[i,j,k]=j/scale_n; # y helper var
+        #             z1[i,j,k]=k/scale_o; # z helper var
 
         flag = True
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'interp3': ")
-        cpp_interp3 = self.applyBCV_module.applyBCV_interp3(
-            _input,
-            x1, y1, z1,
-            torch.Tensor(output_size),
-            torch.tensor([flag], dtype=torch.bool))
-        print(cpp_interp3)
+        # print("\nRunning deeds 'interp3': ")
+        # cpp_interp3 = self.applyBCV_module.applyBCV_interp3(
+        #     _input,
+        #     x1, y1, z1,
+        #     torch.Tensor(output_size),
+        #     torch.tensor([flag], dtype=torch.bool))
+        # print(cpp_interp3)
 
-        cpp_interp3_not_flag = self.applyBCV_module.applyBCV_interp3(
-            _input,
-            x1, y1, z1,
-            torch.Tensor(output_size),
-            torch.tensor([not flag], dtype=torch.bool))
+        # cpp_interp3_not_flag = self.applyBCV_module.applyBCV_interp3(
+        #     _input,
+        #     x1, y1, z1,
+        #     torch.Tensor(output_size),
+        #     torch.tensor([not flag], dtype=torch.bool))
 
-        print("\nDifference: ")
-        print(cpp_interp3_not_flag)
-        #########################################################
-        # Get torch output
-        print("\nRunning torch 'interp3': ")
-        torch_interp3 = self.transformations.interp3(
+        # print("\nDifference: ")
+        # print(cpp_interp3_not_flag)
+        # #########################################################
+        # # Get torch output
+        # print("\nRunning torch 'interp3': ")
+        # torch_interp3 = self.transformations.interp3(
+        #     _input,
+        #     x1, y1, z1,
+        #     output_size,
+        #     flag
+        # )
+
+        # print(torch_interp3)
+
+        ###########
+        # Check timimg
+        # deeds_func = lambda: self.applyBCV_module.applyBCV_interp3(
+        #     _input,
+        #     x1, y1, z1,
+        #     torch.Tensor(output_size),
+        #     torch.tensor([flag], dtype=torch.bool))
+
+        torch_non_optimized_func = lambda: self.transformations.interp3(
             _input,
             x1, y1, z1,
             output_size,
-            flag
+            flag, USE_CONSISTENT_TORCH=False
         )
 
-        print(torch_interp3)
+        torch_optimized_func = lambda: self.transformations.interp3(
+            _input,
+            x1, y1, z1,
+            output_size,
+            flag, USE_CONSISTENT_TORCH=True
+        )
+        _input = _input.cuda()
+        x1_cuda=x1.cuda()
+        y1_cuda=y1.cuda()
+        z1_cuda=z1.cuda()
+        torch_optimized_func_gpu = lambda: self.transformations.interp3(
+            _input,
+            x1_cuda, y1_cuda, z1_cuda,
+            output_size,
+            flag, USE_CONSISTENT_TORCH=True
+        )
+
+        # times_deeds = timeit.timeit(deeds_func, number=100)
+        # times_torch_non_optimized = timeit.timeit(torch_non_optimized_func, number=1)
+        # times_torch_optimized = timeit.timeit(torch_optimized_func, number=100)
+        times_torch_optimized_gpu = timeit.timeit(torch_optimized_func_gpu, number=100)
+
 
         #########################################################
         # Assert difference
@@ -317,37 +356,39 @@ class TestTransformations(unittest.TestCase):
     def test_volfilter(self):
             #########################################################
         # Prepare inputs
-        input_size = (50,50,50)
+        sz=256
+        input_size = (sz,sz,sz)
         _input = torch.randn(input_size)
         print("input is",_input)
         # _input[0,0,0] = 0
         _input[0,0,0] = 5.
         sigma=0.5
-        kernel_sz=2
+        kernel_sz=5
 
 
         print(_input.shape)
 
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'vol_filter': ")
-        cpp_volfilter = self.applyBCV_module.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
-        print(cpp_volfilter)
+        # print("\nRunning deeds 'vol_filter': ")
+        # cpp_volfilter = self.applyBCV_module.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
+        # print(cpp_volfilter)
 
         #########################################################
         # Get torch output
-        print("\nRunning torch 'vol_filter': ")
-        torch_volfilter = self.transformations.vol_filter(_input,kernel_sz,sigma)
-        print("Vol_filter is:",torch_volfilter)
+        # print("\nRunning torch 'vol_filter': ")
+        # torch_volfilter = self.transformations.vol_filter(_input,kernel_sz,sigma)
+        # print("Vol_filter is:",torch_volfilter)
 
 
         ###########
         # Check timimg
         deeds_func = lambda: self.applyBCV_module.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
         torch_optimized_func = lambda: self.transformations.vol_filter(_input,kernel_sz,sigma)
-        torch_optimized_func_gpu = lambda: self.transformations.vol_filter(_input.cuda(),kernel_sz,sigma)
+        _input = _input.cuda()
+        torch_optimized_func_gpu = lambda: self.transformations.vol_filter(_input,kernel_sz,sigma)
 
-        times_deeds = timeit.timeit(deeds_func, number=100)
+        # times_deeds = timeit.timeit(deeds_func, number=100)
         times_torch_optimized = timeit.timeit(torch_optimized_func, number=100)
         times_torch_optimized_gpu = timeit.timeit(torch_optimized_func_gpu, number=100)
 
@@ -363,7 +404,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 1
+        FACTOR = 2
         #D, H, W =  6, 6, 2
 
         DELTA_W = +6.
@@ -382,8 +423,10 @@ class TestTransformations(unittest.TestCase):
         flow_field_path='tests/test_data/case_2/DHW_12x24x36_flow_dim_3x6x9_zero_displacements.dat'
         input_img=read_Nifti(path_img).to(self.device)
         D,H,W=input_img.shape
-        disp_field=np.fromfile(flow_field_path,np.float32)
-        disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
+        # disp_field=np.fromfile(flow_field_path,np.float32)
+        # disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
+        sz=256
+        disp_field = torch.rand([3,sz,sz,sz])
         x_disp_field = disp_field[0]   #torch.zeros(D,H,W)
         y_disp_field = disp_field[1]   #torch.zeros(D,H,W)
         z_disp_field = disp_field[2]  #torch.zeros(D,H,W)
@@ -404,27 +447,27 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'consistentMappingCL': ")
-        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = self.applyBCV_module.applyBCV_consistentMappingCL(
-            x_disp_field,
-            y_disp_field,
-            z_disp_field,
-            x2_disp_field,
-            y2_disp_field,
-            z2_disp_field,
-            torch.tensor([FACTOR], dtype=torch.int))
-        print(deeds_u)
+        # print("\nRunning deeds 'consistentMappingCL': ")
+        # deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = self.applyBCV_module.applyBCV_consistentMappingCL(
+        #     x_disp_field,
+        #     y_disp_field,
+        #     z_disp_field,
+        #     x2_disp_field,
+        #     y2_disp_field,
+        #     z2_disp_field,
+        #     torch.tensor([FACTOR], dtype=torch.int))
+        # print(deeds_u)
 
 
         #########################################################
         # Get torch output
-        print("\nRunning torch 'consistent mapping': ")
+        # print("\nRunning torch 'consistent mapping': ")
 
-        torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
-            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
-        )
+        # torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = self.transformations.consistentMappingCL(
+        #     x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
+        # )
 
-        print(torch_u)
+        # print(torch_u)
 
         ########-----TIME CALCULATION-----########
 
@@ -445,15 +488,23 @@ class TestTransformations(unittest.TestCase):
             x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR,
             USE_CONSISTENT_TORCH=True
             )
-        # timesy=timeit.Timer(lambda:statement_py).timeit()
 
-        times_deeds = timeit.timeit(deeds_func, number=100)
-        times_torch_non_optimized = timeit.timeit(torch_func_non_optimized, number=1)
-        times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
-        times_torch_optimized_gpu = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
-                u_input_flow.cuda(), v_input_flow.cuda(), w_input_flow.cuda(),
-                UPSAMPLED_SIZE.cuda(), USE_CONSISTENT_TORCH=True), number=100)
+        x_disp_field_cuda = x_disp_field.cuda()
+        y_disp_field_cuda = y_disp_field.cuda()
+        z_disp_field_cuda = z_disp_field.cuda()
+        x2_disp_field_cuda = x2_disp_field.cuda()
+        y2_disp_field_cuda = y2_disp_field.cuda()
+        z2_disp_field_cuda = z2_disp_field.cuda()
+
+        torch_func_optimized_gpu = lambda: self.transformations.consistentMappingCL(
+            x_disp_field_cuda, y_disp_field_cuda, z_disp_field_cuda,x2_disp_field_cuda,y2_disp_field_cuda,z2_disp_field_cuda, FACTOR,
+            USE_CONSISTENT_TORCH=True
+        )
+
+        # times_deeds = timeit.timeit(deeds_func, number=100)
+        # times_torch_non_optimized = timeit.timeit(torch_func_non_optimized, number=1)
+        # times_torch_optimized = timeit.timeit(torch_func_optimized, number=100)
+        times_torch_optimized_gpu = timeit.timeit(torch_func_optimized_gpu, number=100)
         print(torch_upsampled_u)
 
         print("Time elapsed:%s sec" %timesy)
@@ -483,8 +534,9 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        INPUT_SIZE = torch.Size((3,6,9))
-        UPSAMPLED_SIZE =  torch.Size((44,34,46))
+        # INPUT_SIZE = torch.Size((3,6,9))
+        sz=256
+        UPSAMPLED_SIZE =  torch.Size((sz*2,sz*2,sz*2))
 
         DELTA_VAL = +5.
 
@@ -493,10 +545,10 @@ class TestTransformations(unittest.TestCase):
 
         path_img='tests/test_data/case_4/label_moving_50_percent.nii.gz'
         flow_field_path='tests/test_data/case_4/deeds_bcv_output/case_4_displacements.dat'
-        input_img=read_Nifti(path_img).to(self.device)
-        D,H,W = input_img.shape
-        disp_field=np.fromfile(flow_field_path,np.float32)
-        disp_field = torch.tensor(disp_field).view(3,D//4,H//4,W//4).to(self.device)
+        # input_img=read_Nifti(path_img).to(self.device)
+        # D,H,W = input_img.shape
+        # disp_field=np.fromfile(flow_field_path,np.float32)
+        disp_field = torch.rand([3,sz,sz,sz])
         print('\ndisp_field size',disp_field[0].shape)
 
         torch.set_printoptions(precision=4, sci_mode=False)
@@ -521,15 +573,15 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Get deeds output
-        print("\nRunning deeds 'upsampleDeformationsCL': deeds_upsampled_u")
-        (deeds_upsampled_u,
-         deeds_upsampled_v,
-         deeds_upsampled_w) = \
-            self.applyBCV_module.applyBCV_upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
-                u_input_flow, v_input_flow, w_input_flow,
-            )
-        print(deeds_upsampled_u)
+        # print("\nRunning deeds 'upsampleDeformationsCL': deeds_upsampled_u")
+        # (deeds_upsampled_u,
+        #  deeds_upsampled_v,
+        #  deeds_upsampled_w) = \
+        #     self.applyBCV_module.applyBCV_upsampleDeformationsCL(
+        #         SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+        #         u_input_flow, v_input_flow, w_input_flow,
+        #     )
+        # print(deeds_upsampled_u)
 
         #########################################################
         # Get torch output
@@ -540,22 +592,36 @@ class TestTransformations(unittest.TestCase):
         #         u_input_flow, v_input_flow, w_input_flow,
         #         UPSAMPLED_SIZE
         #     )
-        times_deeds = timeit.timeit(lambda:self.applyBCV_module.applyBCV_upsampleDeformationsCL(
+        # times_deeds = timeit.timeit(lambda:self.applyBCV_module.applyBCV_upsampleDeformationsCL(
+        #         SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
+        #         u_input_flow, v_input_flow, w_input_flow,
+        #     ),number=100)
+
+        torch_non_optimized_func = lambda:self.transformations.upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
-            ),number=100)
-        times_torch_non_optimized = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
+                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=False)
+        torch_optimized_func = lambda:self.transformations.upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
-                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=False), number=1)
-        times_torch_optimized = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
-                u_input_flow, v_input_flow, w_input_flow,
-                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=True), number=100)
-        times_torch_optimized_gpu = timeit.timeit(lambda:self.transformations.upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
-                u_input_flow.cuda(), v_input_flow.cuda(), w_input_flow.cuda(),
-                UPSAMPLED_SIZE.cuda(), USE_CONSISTENT_TORCH=True), number=100)
+                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=True)
+
+        SIZE_HELPER_FIELD_cuda = SIZE_HELPER_FIELD.cuda()
+        SIZE_HELPER_FIELD_cuda = SIZE_HELPER_FIELD.cuda()
+        SIZE_HELPER_FIELD_cuda = SIZE_HELPER_FIELD.cuda()
+        u_input_flow_cuda = u_input_flow.cuda()
+        v_input_flow_cuda = v_input_flow.cuda()
+        w_input_flow_cuda = w_input_flow.cuda()
+
+        torch_optimized_func_gpu = lambda:self.transformations.upsampleDeformationsCL(
+                SIZE_HELPER_FIELD_cuda, SIZE_HELPER_FIELD_cuda, SIZE_HELPER_FIELD_cuda,
+                u_input_flow_cuda, v_input_flow_cuda, w_input_flow_cuda,
+                UPSAMPLED_SIZE, USE_CONSISTENT_TORCH=True)
+
+        # times_torch_non_optimized = timeit.timeit(torch_non_optimized_func, number=1)
+
+        # times_torch_optimized = timeit.timeit(torch_optimized_func, number=100)
+        times_torch_optimized_gpu = timeit.timeit(torch_optimized_func_gpu, number=100)
         print(torch_upsampled_u)
 
         #########################################################
@@ -600,8 +666,9 @@ class TestTransformations(unittest.TestCase):
 
 if __name__ == '__main__':
     # unittest.main()
+    os.environ['USE_JIT_COMPILE'] = '0'
     tests = TestTransformations()
-    # tests.test_interp3()
-    tests.test_volfilter()
+    tests.test_interp3()
+    # tests.test_volfilter()
     # tests.test_consistentMappingCL()
     # tests.test_upsampleDeformationsCL()
