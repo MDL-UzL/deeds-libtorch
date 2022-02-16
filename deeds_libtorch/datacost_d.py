@@ -23,5 +23,17 @@ def warpAffineS(image_seg,X,u1,v1,w1):
     warped=F.grid_sample(image_seg.unsqueeze(0).unsqueeze(0).float(),warp_grid,mode='nearest',align_corners=True)
     return warped.squeeze(0).squeeze(0)
 
+def interp3xyz():
+    raise NotImplementedError()
 
+def interp3xyzB():
+    raise NotImplementedError()
 
+def dataCostCL():
+    raise NotImplementedError()
+
+def warpImageCL():
+    raise NotImplementedError()
+
+def warpAffine():
+    raise NotImplementedError()

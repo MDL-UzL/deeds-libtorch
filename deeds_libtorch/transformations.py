@@ -7,7 +7,7 @@ from torch.utils.cpp_extension import load
 
 
 
-def jacobians(x_disp_field, y_disp_field, z_disp_field):
+def jacobians(x_disp_field, y_disp_field, z_disp_field, USE_CONSISTENT_TORCH = False):
     # Returns outsz_y=DxHxW jacobian matrices (3x3) of displacements per dimension
     #
     # Jacobian for a single data point (x,y,z) is
@@ -15,8 +15,6 @@ def jacobians(x_disp_field, y_disp_field, z_disp_field):
     #   d_x_disp_field/dx  d_x_disp_field/dy  d_x_disp_field/dz
     #   d_y_disp_field/dx  d_y_disp_field/dy  d_y_disp_field/dz
     #   d_z_disp_field/dx  d_z_disp_field/dy  d_z_disp_field/dz
-
-    USE_CONSISTENT_TORCH = False
 
     assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
         "Displacement field sizes must match."
@@ -90,11 +88,11 @@ def jacobians(x_disp_field, y_disp_field, z_disp_field):
 
 
 
-def std_det_jacobians(x_disp_field, y_disp_field, z_disp_field, factor):
+def std_det_jacobians(x_disp_field, y_disp_field, z_disp_field, factor, USE_CONSISTENT_TORCH = False):
     # Calculate std(determinant(jacobians)) of displacement fields
 
     # Get jacobians
-    _jacobians = jacobians(x_disp_field, y_disp_field, z_disp_field)
+    _jacobians = jacobians(x_disp_field, y_disp_field, z_disp_field, USE_CONSISTENT_TORCH)
 
     # Calculate determinant and std
     jac_square_len = _jacobians.shape[0]

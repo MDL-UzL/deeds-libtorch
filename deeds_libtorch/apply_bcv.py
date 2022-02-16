@@ -1,19 +1,19 @@
 import sys
 
 from torch._C import device
-sys.path.append('./deeds_libtorch')
 import os
 import argparse
 import torch
-from torch.utils.cpp_extension import load
-from imageIOgzType import read_Nifti,read_File
-from transformations import upsampleDeformationsCL
-from datacostD import warpAffineS
+
+from deeds_libtorch.file_io import read_nifti, read_affine_file
+from deeds_libtorch.transformations import upsampleDeformationsCL
+from deeds_libtorch.datacost_d import warpAffineS
 import math
 import nibabel as nib
 import numpy as np
 from timeit import default_timer as timer
 import time
+
 def main(argv):
     parser = argparse.ArgumentParser()
 
@@ -33,15 +33,15 @@ def main(argv):
 
     # reading the nifti image-segmentation?
     print("---Reading moving image---")
-    mov_img = read_Nifti(args.moving).to(device)
+    mov_img = read_nifti(args.moving).to(device)
     D,H,W = mov_img.shape
 
     #reading affine matrix
     if(args.affine_mat):
         print("----Reading affine matrix---")
-        X_np=read_File(args.affine_mat)#1d list-reshape to(3,4)
-        X=torch.from_numpy(X_np).to(device)#converted in to tensor
-        X=X.reshape(4,4)[:3,:]
+        X = read_affine_file(args.affine_mat)#1d list-reshape to(3,4)
+        print(X)
+        X=X[:3,:]
     else:
         print("---Using identity transform----")
         X=torch.eye(4,3)#matrix for identity transform
@@ -63,15 +63,12 @@ def main(argv):
     wx=torch.zeros((D,H,W))
 
     #creating gridded flow field
-
-
     u1 = disp_field[0]
     v1 = disp_field[1]
     w1 = disp_field[2]
 
     #doing Upsampling for the field
     u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
-    
 
     #warping segmentation
     start_2=time.time()

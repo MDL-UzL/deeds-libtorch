@@ -470,10 +470,10 @@ torch::Tensor applyBCV_warpAffineS(
     short* warp= new short[m*n*o];
 
     warpAffineS(warp,input_img,T,u1,v1,w1, m, n, o);
-                std::cout<<"\nshort warp=";
-    for(int pri=0;pri<m*n*o ;pri++){
-		std::cout<<warp[pri]<<" ";
-	}
+    //             std::cout<<"\nshort warp=";
+    // for(int pri=0;pri<m*n*o ;pri++){
+	// 	std::cout<<warp[pri]<<" ";
+	// }
     std::vector<short> warp_vect{warp, warp+m*n*o};
 
     auto options = torch::TensorOptions().dtype(torch::kShort);
