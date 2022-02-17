@@ -16,6 +16,7 @@ def warpAffineS(image_seg, affine_mat, u1, v1, w1):
     affine_mat[1,-1] = (affine_mat[1,-1]/H)*2.0*affine_mat[1,1]
     affine_mat[2,-1] = (affine_mat[2,-1]/D)*2.0*affine_mat[2,2]
 
+    # Compensate sheering and scaling
     affine_mat[0,-1] = affine_mat[0,:4].sum()-1.0
     affine_mat[1,-1] = affine_mat[1,:4].sum()-1.0
     affine_mat[2,-1] = affine_mat[2,:4].sum()-1.0

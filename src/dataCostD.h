@@ -277,9 +277,9 @@ void warpAffineS(short* warped,short* input,float* X,
 	// 	std::cout<<input[pri]<<" ";
 	// }
     //         std::cout<<"\nfloat X=";
-    for(int pri=0;pri<12 ;pri++){
-		std::cout<<X[pri]<<" ";
-	}
+    // for(int pri=0;pri<12 ;pri++){
+	// 	std::cout<<X[pri]<<" ";
+	// }
     //             std::cout<<"\nfloat u1=";
     // for(int pri=0;pri<m*n*o ;pri++){
 	// 	std::cout<<u1[pri]<<" ";
