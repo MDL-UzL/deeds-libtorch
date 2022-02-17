@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 import timeit
 
-from __init__ import APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
+from __init__ import CPP_APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
 from deeds_libtorch.datacost_d import warpAffineS
 
 
@@ -34,7 +34,7 @@ class TestDatacostD(unittest.TestCase):
 
         #########################################################
         # Get cpp output
-        deeds_warped = log_wrapper(APPLY_BCV_MODULE.applyBCV_warpAffineS, input_img, T, x_disp_field, y_disp_field, z_disp_field)
+        deeds_warped = log_wrapper(CPP_APPLY_BCV_MODULE.applyBCV_warpAffineS, input_img, T, x_disp_field, y_disp_field, z_disp_field)
 
         #########################################################
         # Get torch output

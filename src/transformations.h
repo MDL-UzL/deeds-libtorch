@@ -347,3 +347,219 @@ void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow fiel
     //}
 
 }
+
+
+// libtorch unittest API
+torch::Tensor transformations_jacobian(
+    torch::Tensor input_u,
+    torch::Tensor input_v,
+    torch::Tensor input_w,
+    torch::Tensor input_factor) {
+
+    float* u = input_u.data_ptr<float>();
+    float* v = input_v.data_ptr<float>();
+    float* w = input_w.data_ptr<float>();
+    int* factor = input_factor.data_ptr<int>();
+
+    int m = input_u.size(2);
+    int n = input_u.size(1);
+    int o = input_u.size(0);
+
+    // cout<<"m"<<m;
+    // cout<<"n"<<n;
+    // cout<<"o"<<o;
+
+    float jacobian_output = jacobian(u, v, w, m, n, o, *factor);
+    std::vector<float> jac_vect{jacobian_output};
+
+    auto options = torch::TensorOptions();
+    return torch::from_blob(jac_vect.data(), {1}, options).clone();
+}
+
+
+torch::Tensor transformations_interp3(
+    torch::Tensor pInput,
+    torch::Tensor pX1,
+    torch::Tensor pY1,
+    torch::Tensor pZ1,
+    torch::Tensor pOutput_size,
+    torch::Tensor pFlag) {
+
+    int m2 = pInput.size(0);
+    int n2 = pInput.size(1);
+    int o2 = pInput.size(2);
+
+    int m = pOutput_size[0].item<int>();
+    int n = pOutput_size[1].item<int>();
+    int o = pOutput_size[2].item<int>();
+
+    float* input = pInput.data_ptr<float>();
+    float* interp=new float[m*n*o];
+
+    float* x1 = pX1.data_ptr<float>();
+    float* y1 = pY1.data_ptr<float>();
+    float* z1 = pZ1.data_ptr<float>();
+
+    bool* flag = pFlag.data_ptr<bool>();
+
+    interp3(
+        interp, // interpolated output
+	    input, // gridded flow field
+		x1, y1, z1, //helper var (output size)
+		m, n, o, //output size
+		m2, n2, o2, //gridded flow field size
+		*flag
+    );
+
+    std::vector<float> interp_vect{interp, interp + m*n*o};
+
+    auto options = torch::TensorOptions();
+    return torch::from_blob(interp_vect.data(), {m,n,o}, options).clone();
+}
+
+torch::Tensor transformations_volfilter(
+    torch::Tensor pInput,
+    torch::Tensor pKernel_sz,
+    torch::Tensor pSigma) {
+
+    int m = pInput.size(0);
+    int n = pInput.size(1);
+    int o = pInput.size(2);
+
+    int Kernel_sz = pKernel_sz.item<int>();
+    float Sigma = pSigma.item<float>();
+
+    float* input = pInput.data_ptr<float>();
+
+    volfilter(input, m, n, o, Kernel_sz, Sigma);
+
+    std::vector<float> gauss_vect{input, input + m*n*o};
+
+    auto options = torch::TensorOptions();
+    return torch::from_blob(gauss_vect.data(), {m,n,o}, options).clone();
+}
+
+std::tuple<
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor > transformations_consistentMappingCL(
+
+    torch::Tensor pInput_u,
+    torch::Tensor pInput_v,
+    torch::Tensor pInput_w,
+    torch::Tensor pInput_u2,
+    torch::Tensor pInput_v2,
+    torch::Tensor pInput_w2,
+    torch::Tensor input_factor) {
+
+    int m = pInput_u.size(0);
+    int n = pInput_u.size(1);
+    int o = pInput_u.size(2);
+
+    torch::Tensor input_u_copy = pInput_u.clone();
+    torch::Tensor input_v_copy = pInput_v.clone();
+    torch::Tensor input_w_copy = pInput_w.clone();
+    torch::Tensor input_u2_copy = pInput_u2.clone();
+    torch::Tensor input_v2_copy = pInput_v2.clone();
+    torch::Tensor input_w2_copy = pInput_w2.clone();
+
+    float* u = input_u_copy.data_ptr<float>();
+    float* v = input_v_copy.data_ptr<float>();
+    float* w = input_w_copy.data_ptr<float>();
+    float* u2 = input_u2_copy.data_ptr<float>();
+    float* v2 = input_v2_copy.data_ptr<float>();
+    float* w2 = input_w2_copy.data_ptr<float>();
+
+    int* factor = input_factor.data_ptr<int>();
+
+    // cout<<"m"<<m;
+    // cout<<"n"<<n;
+    // cout<<"o"<<o;
+
+    consistentMappingCL(u, v, w, u2, v2, w2, m, n, o, *factor);
+
+    std::vector<float> new_u{u, u + m*n*o};
+    std::vector<float> new_v{v, v + m*n*o};
+    std::vector<float> new_w{w, w + m*n*o};
+    std::vector<float> new_u2{u2, u2 + m*n*o};
+    std::vector<float> new_v2{v2, v2 + m*n*o};
+    std::vector<float> new_w2{w2, w2 + m*n*o};
+
+    auto options = torch::TensorOptions();
+
+    return std::tuple<
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor>(
+        torch::from_blob(new_u.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_v.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_w.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_u2.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_v2.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_w2.data(), {m,n,o}, options).clone()
+    );
+}
+
+
+std::tuple<
+        torch::Tensor,
+        torch::Tensor,
+        torch::Tensor> transformations_upsampleDeformationsCL(
+
+    torch::Tensor pInput_u,
+    torch::Tensor pInput_v,
+    torch::Tensor pInput_w,
+    torch::Tensor pInput_u2,
+    torch::Tensor pInput_v2,
+    torch::Tensor pInput_w2) {
+
+    int m = pInput_u.size(0);
+    int n = pInput_u.size(1);
+    int o = pInput_u.size(2);
+
+    int m2 = pInput_u2.size(0);
+    int n2 = pInput_u2.size(1);
+    int o2 = pInput_u2.size(2);
+
+    torch::Tensor input_u_copy = pInput_u.clone();
+    torch::Tensor input_v_copy = pInput_v.clone();
+    torch::Tensor input_w_copy = pInput_w.clone();
+    torch::Tensor input_u2_copy = pInput_u2.clone();
+    torch::Tensor input_v2_copy = pInput_v2.clone();
+    torch::Tensor input_w2_copy = pInput_w2.clone();
+
+    float* u = input_u_copy.data_ptr<float>();
+    float* v = input_v_copy.data_ptr<float>();
+    float* w = input_w_copy.data_ptr<float>();
+    float* u2 = input_u2_copy.data_ptr<float>();
+    float* v2 = input_v2_copy.data_ptr<float>();
+    float* w2 = input_w2_copy.data_ptr<float>();
+
+
+    // cout<<"m"<<m;
+    // cout<<"n"<<n;
+    // cout<<"o"<<o;
+
+    upsampleDeformationsCL(u, v, w, u2, v2, w2, m, n, o, m2, n2, o2);
+
+    std::vector<float> new_u{u, u + m*n*o};
+    std::vector<float> new_v{v, v + m*n*o};
+    std::vector<float> new_w{w, w + m*n*o};
+
+    auto options = torch::TensorOptions();
+
+    return std::tuple<
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor>(
+        torch::from_blob(new_u.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_v.data(), {m,n,o}, options).clone(),
+        torch::from_blob(new_w.data(), {m,n,o}, options).clone()
+    );
+}

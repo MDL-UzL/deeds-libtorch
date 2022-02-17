@@ -365,3 +365,39 @@ void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float*
 
 
 }
+
+// libtorch unittest API
+torch::Tensor datacost_d_warpAffineS(
+    torch::Tensor image_in,
+    torch::Tensor pInput_T,
+    torch::Tensor pInput_u1,
+    torch::Tensor pInput_v1,
+    torch::Tensor pInput_w1) {
+
+    torch::Tensor input_image_copy = image_in.clone();
+    torch::Tensor input_u1_copy = pInput_u1.clone();
+    torch::Tensor input_v1_copy = pInput_v1.clone();
+    torch::Tensor input_w1_copy = pInput_w1.clone();
+    torch::Tensor input_T_copy = pInput_T.clone();
+
+    int m = image_in.size(0);
+    int n = image_in.size(1);
+    int o = image_in.size(2);
+    float* u1 = input_u1_copy.data_ptr<float>();
+    float* v1 = input_v1_copy.data_ptr<float>();
+    float* w1 = input_w1_copy.data_ptr<float>();
+    float* T = input_T_copy.data_ptr<float>();
+
+    short* input_img = input_image_copy.data_ptr<short>();
+    short* warp= new short[m*n*o];
+
+    warpAffineS(warp,input_img,T,u1,v1,w1, m, n, o);
+    //             std::cout<<"\nshort warp=";
+    // for(int pri=0;pri<m*n*o ;pri++){
+	// 	std::cout<<warp[pri]<<" ";
+	// }
+    std::vector<short> warp_vect{warp, warp+m*n*o};
+
+    auto options = torch::TensorOptions().dtype(torch::kShort);
+    return torch::from_blob(warp_vect.data(), {m,n,o}, options).clone();
+}

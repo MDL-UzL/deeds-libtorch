@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from deeds_libtorch.apply_bcv import main as apply_bcv_main
 
-from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, TEST_DATA_DIR, APPLY_BCV_MODULE
+from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, TEST_DATA_DIR, CPP_APPLY_BCV_MODULE
 
 class TestApplyBCV(unittest.TestCase):
 
@@ -48,7 +48,7 @@ class TestApplyBCV(unittest.TestCase):
 
         #########################################################
         # Write deeds output to harddrive
-        APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
+        CPP_APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
 
         #########################################################
         # Write torch output to harddrive
@@ -95,7 +95,7 @@ class TestApplyBCV(unittest.TestCase):
 
         #########################################################
         # Write deeds output to harddrive
-        APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
+        CPP_APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
 
         #########################################################
         # Write torch output to harddrive
@@ -142,7 +142,7 @@ class TestApplyBCV(unittest.TestCase):
 
         #########################################################
         # Write deeds output to harddrive
-        APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
+        CPP_APPLY_BCV_MODULE.applyBCV_main(len(case_args_cpp), case_args_cpp)
 
         #########################################################
         # Write torch output to harddrive

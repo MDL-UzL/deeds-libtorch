@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 
 from deeds_libtorch.file_io import read_nifti, read_affine_file
-from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, APPLY_BCV_MODULE, test_equal_tensors
+from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_APPLY_BCV_MODULE, test_equal_tensors
 
 
 class TestFileIo(unittest.TestCase):

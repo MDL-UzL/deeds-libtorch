@@ -10,17 +10,13 @@ import nibabel as nib
 from deeds_libtorch.transformations import interp3, std_det_jacobians, vol_filter, upsampleDeformationsCL, consistentMappingCL
 
 
-from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, APPLY_BCV_MODULE, test_equal_tensors
-
+from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
 
 
 class TestTransformations(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-
-
 
     def test_jacobian(self):
 
@@ -40,16 +36,11 @@ class TestTransformations(unittest.TestCase):
 
         x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
         x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        # x_disp_field[2,2,2] = -2.0*(DELTA_W/W) # u displacement
-        # y_disp_field[:,:,:] = -2.0*(DELTA_H/H) # v displacement
-        # z_disp_field[:,:,:] = -2.0*(DELTA_D/D) # w displacement
-
-
 
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'jacobian': ")
-        cpp_std_det_jac = APPLY_BCV_MODULE.applyBCV_jacobian(
+        cpp_std_det_jac = CPP_APPLY_BCV_MODULE.applyBCV_jacobian(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -96,12 +87,10 @@ class TestTransformations(unittest.TestCase):
         x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
         x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
 
-
-
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'consistentMappingCL': ")
-        cpp_consistentMappingCL = APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
+        cpp_consistentMappingCL = CPP_APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -149,7 +138,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'interp3': ")
-        cpp_interp3 = APPLY_BCV_MODULE.applyBCV_interp3(
+        cpp_interp3 = CPP_APPLY_BCV_MODULE.applyBCV_interp3(
             _input,
             x1, y1, z1,
             torch.Tensor(output_size),
@@ -199,7 +188,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'interp3': ")
-        cpp_interp3 = APPLY_BCV_MODULE.applyBCV_interp3(
+        cpp_interp3 = CPP_APPLY_BCV_MODULE.applyBCV_interp3(
             _input,
             x1, y1, z1,
             torch.Tensor(output_size),
@@ -219,6 +208,56 @@ class TestTransformations(unittest.TestCase):
         # Assert difference
         assert test_equal_tensors(torch_interp3, cpp_interp3)
 
+    def test_interp3_complex_tensors(self):
+
+        #########################################################
+        # Prepare inputs
+        input_size = (2,3,3)
+        _input = torch.zeros(input_size)
+        _input[0,0,0] = 1.
+        _input[0,-1,-1] = 10
+
+        output_size = (4,6,3)
+
+        scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
+
+        x1 = torch.zeros(output_size)
+        y1 = torch.zeros(output_size)
+        z1 = torch.zeros(output_size)
+        m, n, o = output_size
+        for k in range(o):
+            for j in range(n):
+                for i in range(m):
+                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    y1[i,j,k]=j/scale_n; # y helper var
+                    z1[i,j,k]=k/scale_o; # z helper var
+
+        flag = False
+        #########################################################
+        # Get cpp output
+        cpp_interp3 = log_wrapper(
+            CPP_TRANSFORMATIONS_MODULE.cpp_interp3,
+            _input,
+            x1, y1, z1,
+            torch.Tensor(output_size),
+            torch.tensor([flag], dtype=torch.bool)
+        )
+
+        #########################################################
+        # Get torch output
+        torch_interp3 = log_wrapper(
+            interp3,
+            _input,
+            x1, y1, z1,
+            output_size,
+            flag
+        )
+
+        #########################################################
+        # Assert difference
+        assert test_equal_tensors(torch_interp3, cpp_interp3)
+
+
     def test_volfilter(self):
             #########################################################
         # Prepare inputs
@@ -231,7 +270,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'vol_filter': ")
-        cpp_volfilter = APPLY_BCV_MODULE.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
+        cpp_volfilter = CPP_APPLY_BCV_MODULE.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
 
         #########################################################
         # Get torch output
@@ -275,7 +314,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'consistentMappingCL': ")
-        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
+        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = CPP_APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -334,7 +373,7 @@ class TestTransformations(unittest.TestCase):
         (deeds_upsampled_u,
          deeds_upsampled_v,
          deeds_upsampled_w) = \
-            cpp_volfilter = APPLY_BCV_MODULE.applyBCV_upsampleDeformationsCL(
+            cpp_volfilter = CPP_APPLY_BCV_MODULE.applyBCV_upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
             )
@@ -370,8 +409,10 @@ class TestTransformations(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     tests = TestTransformations()
-    tests.test_jacobian()
+    # tests.test_jacobian()
     # tests.test_interp3()
+    # tests.test_interp3_flag_set()
+    tests.test_interp3_complex_tensors()
     # tests.test_volfilter()
     # tests.test_consistentMappingCL()
     # tests.test_upsampleDeformationsCL()
