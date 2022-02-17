@@ -12,9 +12,9 @@ def warpAffineS(image_seg, affine_mat, u1, v1, w1):
     affine_mat[:,2], affine_mat[:,0] = affine_mat.clone()[:,0], affine_mat.clone()[:,2]
 
     # Rescale displacements
-    affine_mat[0,-1] = (affine_mat[0,-1]/W)*2.0-1.0
-    affine_mat[1,-1] = (affine_mat[1,-1]/H)*2.0-1.0
-    affine_mat[2,-1] = (affine_mat[2,-1]/D)*2.0-1.0
+    affine_mat[0,-1] = 0.5#(affine_mat[0,-1]/W)*2.0-0.0
+    affine_mat[1,-1] = 0.5#(affine_mat[1,-1]/H)*2.0+1.0
+    affine_mat[2,-1] = 0.0#(affine_mat[2,-1]/D)*2.0-0.0
 
     affine_mat
     # Readjust scaling point
@@ -23,7 +23,7 @@ def warpAffineS(image_seg, affine_mat, u1, v1, w1):
     # affine_mat[2,-1] += affine_mat[2,2]-1.0
 
     grid_all = F.affine_grid(affine_mat.unsqueeze(0),(1,1,D,H,W),align_corners=True)#affine_matransformation grid
-    grid_all+=1.0
+    # grid_all+=1.0
     warped = F.grid_sample(image_seg.unsqueeze(0).unsqueeze(0).float(), grid_all, mode='nearest', align_corners=True, padding_mode='border')
 
     # u1 = u1.unsqueeze(0).unsqueeze(0)
