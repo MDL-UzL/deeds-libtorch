@@ -19,18 +19,20 @@ class TestDatacostD(unittest.TestCase):
     def test_warpAffineS(self):
         #########################################################
         # Prepare inputs
-        sz=16
-        D, H, W = sz, sz, sz
-
-        input_img = torch.arange(D*H*W).view(D,H,W).short()
+        PAD = 3
+        input_img = torch.nn.functional.pad(torch.ones(3,3,3).short(), [PAD]*6)
+        D, H, W = input_img.shape
 
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)+1
+        x_disp_field = torch.zeros(D,H,W)
         y_disp_field = torch.zeros(D,H,W)
         z_disp_field = torch.zeros(D,H,W)
-        T = torch.eye(3,4)
-        T = T+torch.rand_like(T)*.01
-
+        T = torch.tensor([
+            [2., 1., 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.]]
+        )
 
         #########################################################
         # Get cpp output
@@ -38,10 +40,10 @@ class TestDatacostD(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        torch_warped = log_wrapper(warpAffineS, input_img, T, x_disp_field ,y_disp_field, z_disp_field)
+        torch_warped = log_wrapper(warpAffineS, input_img, T[0:3], x_disp_field , y_disp_field, z_disp_field)
         #########################################################
         # Assert difference
-        assert test_equal_tensors(deeds_warped, torch_warped.short()), "Tensors do not match"
+        assert test_equal_tensors(deeds_warped, torch_warped), "Tensors do not match"
 
     def test_interp3xyz(self):
         assert False
