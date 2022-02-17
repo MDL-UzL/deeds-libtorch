@@ -47,7 +47,7 @@ else:
 def test_equal_tensors(tensor_a, tensor_b):
     return torch.allclose(tensor_a, tensor_b,
         rtol=1e-05, atol=1e-08, equal_nan=False
-    ), "Tensors do not match"
+    )
 
 
 

@@ -25,7 +25,7 @@ class TestDatacostD(unittest.TestCase):
         input_img = torch.arange(D*H*W).view(D,H,W).short()
 
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
+        x_disp_field = torch.zeros(D,H,W)+1
         y_disp_field = torch.zeros(D,H,W)
         z_disp_field = torch.zeros(D,H,W)
         T = torch.eye(3,4)
@@ -34,14 +34,14 @@ class TestDatacostD(unittest.TestCase):
 
         #########################################################
         # Get cpp output
-        deeds_warped = log_wrapper(CPP_APPLY_BCV_MODULE.applyBCV_warpAffineS, input_img, T, x_disp_field, y_disp_field, z_disp_field)
+        deeds_warped = log_wrapper(CPP_APPLY_BCV_MODULE.datacost_d_warpAffineS, input_img, T, x_disp_field, y_disp_field, z_disp_field)
 
         #########################################################
         # Get torch output
         torch_warped = log_wrapper(warpAffineS, input_img, T, x_disp_field ,y_disp_field, z_disp_field)
         #########################################################
         # Assert difference
-        assert test_equal_tensors(deeds_warped, torch_warped.short())
+        assert test_equal_tensors(deeds_warped, torch_warped.short()), "Tensors do not match"
 
     def test_interp3xyz(self):
         assert False
@@ -61,6 +61,6 @@ class TestDatacostD(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
-    # tests = TestDatacostD()
-    # tests.test_warpAffineS()
+    # unittest.main()
+    tests = TestDatacostD()
+    tests.test_warpAffineS()

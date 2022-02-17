@@ -5,7 +5,7 @@ import os
 import argparse
 import torch
 
-from deeds_libtorch.file_io import read_nifti, read_affine_file
+from deeds_libtorch.file_io import read_nifti, read_affine_file, save_nifti
 from deeds_libtorch.transformations import upsampleDeformationsCL
 from deeds_libtorch.datacost_d import warpAffineS
 import math
@@ -14,7 +14,7 @@ import numpy as np
 from timeit import default_timer as timer
 import time
 
-def main(argv):
+def main(argv, mod):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-M', '--moving', type=str, help="moving.nii.gz path")
@@ -33,7 +33,7 @@ def main(argv):
 
     # reading the nifti image-segmentation?
     print("---Reading moving image---")
-    mov_img = read_nifti(args.moving).to(device)
+    mov_img, header, affine = read_nifti(args.moving)
     D,H,W = mov_img.shape
 
     #reading affine matrix
@@ -41,7 +41,7 @@ def main(argv):
         print("----Reading affine matrix---")
         X = read_affine_file(args.affine_mat)#1d list-reshape to(3,4)
         print(X)
-        X=X[:3,:]
+        X=X[:,:3].t()
     else:
         print("---Using identity transform----")
         X=torch.eye(4,3)#matrix for identity transform
@@ -68,17 +68,13 @@ def main(argv):
     w1 = disp_field[2]
 
     #doing Upsampling for the field
-    u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1)
+    u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1, USE_CONSISTENT_TORCH=True)
 
     #warping segmentation
-    start_2=time.time()
-    warped_seg=warpAffineS(mov_img,X,u1_,v1_,w1_).to(device)
-    print('time taken warp_seg: %s sec' %(time.time()-start_2))
+    warped_seg = warpAffineS(mov_img,X,u1_,v1_,w1_).to(device)
 
     #writing the warped niftii file
-    warped_np=warped_seg.numpy()
-    warped_nii = nib.Nifti1Image(warped_np, affine=np.eye(4,4))
-    nib.save(warped_nii,args.deformed)
+    save_nifti(warped_seg, args.deformed, header=header)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

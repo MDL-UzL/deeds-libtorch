@@ -40,7 +40,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'jacobian': ")
-        cpp_std_det_jac = CPP_APPLY_BCV_MODULE.applyBCV_jacobian(
+        cpp_std_det_jac = CPP_APPLY_BCV_MODULE.transformations_jacobian(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -138,7 +138,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'interp3': ")
-        cpp_interp3 = CPP_APPLY_BCV_MODULE.applyBCV_interp3(
+        cpp_interp3 = CPP_APPLY_BCV_MODULE.transformations_interp3(
             _input,
             x1, y1, z1,
             torch.Tensor(output_size),
@@ -188,7 +188,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'interp3': ")
-        cpp_interp3 = CPP_APPLY_BCV_MODULE.applyBCV_interp3(
+        cpp_interp3 = CPP_APPLY_BCV_MODULE.transformations_interp3(
             _input,
             x1, y1, z1,
             torch.Tensor(output_size),
@@ -236,7 +236,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         cpp_interp3 = log_wrapper(
-            CPP_TRANSFORMATIONS_MODULE.cpp_interp3,
+            CPP_APPLY_BCV_MODULE.transformations_interp3,
             _input,
             x1, y1, z1,
             torch.Tensor(output_size),
@@ -270,7 +270,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'vol_filter': ")
-        cpp_volfilter = CPP_APPLY_BCV_MODULE.applyBCV_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
+        cpp_volfilter = CPP_APPLY_BCV_MODULE.transformations_volfilter(_input,torch.tensor([kernel_sz]), torch.tensor([sigma]))
 
         #########################################################
         # Get torch output
@@ -314,7 +314,7 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'consistentMappingCL': ")
-        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = CPP_APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
+        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = CPP_APPLY_BCV_MODULE.transformations_consistentMappingCL(
             x_disp_field,
             y_disp_field,
             z_disp_field,
@@ -369,15 +369,14 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Get cpp output
-        print("\nRunning deeds 'upsampleDeformationsCL': deeds_upsampled_u")
-        (deeds_upsampled_u,
-         deeds_upsampled_v,
-         deeds_upsampled_w) = \
-            cpp_volfilter = CPP_APPLY_BCV_MODULE.applyBCV_upsampleDeformationsCL(
+        print("\nRunning deeds 'upsampleDeformationsCL': cpp_upsampled_u")
+        (cpp_upsampled_u,
+         cpp_upsampled_v,
+         cpp_upsampled_w) = CPP_APPLY_BCV_MODULE.transformations_upsampleDeformationsCL(
                 SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
             )
-        print(deeds_upsampled_u)
+        print(cpp_upsampled_u)
 
         #########################################################
         # Get torch output
@@ -392,15 +391,15 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_upsampled_u, deeds_upsampled_u,
+        assert torch.allclose(torch_upsampled_u, cpp_upsampled_u,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
-        assert torch.allclose(torch_upsampled_v, deeds_upsampled_v,
+        assert torch.allclose(torch_upsampled_v, cpp_upsampled_v,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
-        assert torch.allclose(torch_upsampled_w, deeds_upsampled_w,
+        assert torch.allclose(torch_upsampled_w, cpp_upsampled_w,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
@@ -412,7 +411,7 @@ if __name__ == '__main__':
     # tests.test_jacobian()
     # tests.test_interp3()
     # tests.test_interp3_flag_set()
-    tests.test_interp3_complex_tensors()
+    # tests.test_interp3_complex_tensors()
     # tests.test_volfilter()
     # tests.test_consistentMappingCL()
-    # tests.test_upsampleDeformationsCL()
+    tests.test_upsampleDeformationsCL()

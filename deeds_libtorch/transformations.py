@@ -282,7 +282,7 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, output_size=None, USE_CONSISTENT_TORCH=False):
+def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, USE_CONSISTENT_TORCH=False):
 
     # USE_CONSISTENT_TORCH=True
 
@@ -296,9 +296,9 @@ def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, output_size=None, USE_C
         v = v.unsqueeze(0).unsqueeze(0)
         w = w.unsqueeze(0).unsqueeze(0)
         return (
-            torch.nn.functional.interpolate(u, size=output_size, mode='trilinear', align_corners=False),
-            torch.nn.functional.interpolate(v, size=output_size, mode='trilinear', align_corners=False),
-            torch.nn.functional.interpolate(w, size=output_size, mode='trilinear', align_corners=False)
+            torch.nn.functional.interpolate(u, size=u_out.shape, mode='trilinear', align_corners=False).squeeze(),
+            torch.nn.functional.interpolate(v, size=u_out.shape, mode='trilinear', align_corners=False).squeeze(),
+            torch.nn.functional.interpolate(w, size=u_out.shape, mode='trilinear', align_corners=False).squeeze()
         )
 
     #u1,v1,w1-flow field
