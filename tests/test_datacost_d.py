@@ -19,8 +19,10 @@ class TestDatacostD(unittest.TestCase):
     def test_warpAffineS(self):
         #########################################################
         # Prepare inputs
-        PAD = 3
-        input_img = torch.nn.functional.pad(torch.ones(3,3,3).short(), [PAD]*6)
+        PAD = 1
+
+        CONTENT = 2
+        input_img = torch.nn.functional.pad(torch.ones(CONTENT,CONTENT,CONTENT).short(), [PAD]*6)
         D, H, W = input_img.shape
 
         ## Generate some artificial displacements for x,y,z
@@ -28,9 +30,9 @@ class TestDatacostD(unittest.TestCase):
         y_disp_field = torch.zeros(D,H,W)
         z_disp_field = torch.zeros(D,H,W)
         T = torch.tensor([
-            [2., 1., 0., 0.],
-            [0., 1., 0., 0.],
-            [0., 0., 1., 0.],
+            [1.5, .5, 1.0, 1.],
+            [.0, 2., 0.0, 0.],
+            [.0, .0, 1., 0.],
             [0., 0., 0., 1.]]
         )
 
