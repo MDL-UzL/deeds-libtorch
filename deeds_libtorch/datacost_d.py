@@ -12,11 +12,10 @@ def warpAffineS(image_seg, affine_mat, u1, v1, w1):
     affine_mat[:,2], affine_mat[:,0] = affine_mat.clone()[:,0], affine_mat.clone()[:,2]
 
     # Rescale displacements
-    affine_mat[0,-1] = 0.5#(affine_mat[0,-1]/W)*2.0-0.0
-    affine_mat[1,-1] = 0.5#(affine_mat[1,-1]/H)*2.0+1.0
-    affine_mat[2,-1] = 0.0#(affine_mat[2,-1]/D)*2.0-0.0
+    affine_mat[0,-1] = affine_mat[0,:3].sum()-1.0#+(affine_mat[0,-1]/W)*2.0
+    affine_mat[1,-1] = affine_mat[1,:3].sum()-1.0#+(affine_mat[1,-1]/H)*2.0
+    affine_mat[2,-1] = affine_mat[2,:3].sum()-1.0#+(affine_mat[2,-1]/D)*2.0
 
-    affine_mat
     # Readjust scaling point
     # affine_mat[0,-1] += affine_mat[0,0]-1.0
     # affine_mat[1,-1] += affine_mat[1,1]-1.0
