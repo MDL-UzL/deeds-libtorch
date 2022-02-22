@@ -44,9 +44,23 @@ else:
 
 
 
-def test_equal_tensors(tensor_a, tensor_b):
+def test_equal_tensors(tensor_a, tensor_b, lazy=False):
+    RTOL = 1e-05
+    ATOL = 1e-08
+    UNEQ_MAX_RATIO = 0.005
+
+    if lazy:
+        res = torch.isclose(tensor_a, tensor_b,
+        rtol=RTOL, atol=ATOL, equal_nan=False
+    )
+        uniques, cnt = res.unique(return_counts=True)
+        if uniques.numel() == 2:
+            (uneq, eq) = cnt
+            return uneq/eq < UNEQ_MAX_RATIO
+        return all(uniques)
+
     return torch.allclose(tensor_a, tensor_b,
-        rtol=1e-05, atol=1e-08, equal_nan=False
+        rtol=RTOL, atol=ATOL, equal_nan=False
     )
 
 
