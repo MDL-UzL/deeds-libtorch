@@ -309,43 +309,37 @@ void consistentMappingCL(float* u,float* v,float* w,float* u2,float* v2,float* w
 }
 
 
-void upsampleDeformationsCL(float* u1,float* v1,float* w1, //full size flow field
-							float* u0,float* v0,float* w0, //gridded flow field: x-disps, y-disps, z-disps
-							int m,int n,int o, //full size output
-							int m2,int n2,int o2){ //gridded size
+void upsampleDeformationsCL(float* u_out,float* v_out,float* w_out, //full size flow field
+							float* u_in,float* v_in,float* w_in, //gridded flow field: x-disps, y-disps, z-disps
+							int m_out,int n_out,int o_out, //full size output
+							int m_in,int n_in,int o_in){ //gridded size
 
 
-    float scale_m=(float)m/(float)m2; //full_size/gridded_size x (>1)
-    float scale_n=(float)n/(float)n2; //full_size/gridded_size y (>1)
-    float scale_o=(float)o/(float)o2; //full_size/gridded_size z (>1)
+    float scale_m=(float)m_out/(float)m_in; //full_size/gridded_size x (>1)
+    float scale_n=(float)n_out/(float)n_in; //full_size/gridded_size y (>1)
+    float scale_o=(float)o_out/(float)o_in; //full_size/gridded_size z (>1)
 
-    float* x1=new float[m*n*o]; // full sized
-    float* y1=new float[m*n*o];
-    float* z1=new float[m*n*o];
-    for(int k=0;k<o;k++){
-        for(int j=0;j<n;j++){
-            for(int i=0;i<m;i++){
-                x1[i+j*m+k*m*n]=j/scale_n; //x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
-                y1[i+j*m+k*m*n]=i/scale_m; //y helper var
-                z1[i+j*m+k*m*n]=k/scale_o; //z helper var
+    float* x1=new float[m_out*n_out*o_out]; // full sized
+    float* y1=new float[m_out*n_out*o_out];
+    float* z1=new float[m_out*n_out*o_out];
+
+    for(int k=0;k<o_out;k++){
+        for(int j=0;j<n_out;j++){
+            for(int i=0;i<m_out;i++){
+                x1[i+j*m_out+k*m_out*n_out]=j/scale_n; //x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                y1[i+j*m_out+k*m_out*n_out]=i/scale_m; //y helper var
+                z1[i+j*m_out+k*m_out*n_out]=k/scale_o; //z helper var
             }
         }
     }
 
-    interp3(u1,u0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate x dir, u1 is returned
-    interp3(v1,v0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate y dir, v1 is returned
-    interp3(w1,w0,x1,y1,z1,m,n,o,m2,n2,o2,false); //interpolate z dir, w1 is returned
+    interp3(u_out, u_in, x1, y1, z1, m_out, n_out, o_out, m_in, n_in, o_in, false); //interpolate x dir, u1 is returned
+    interp3(v_out, v_in, x1, y1, z1, m_out, n_out, o_out, m_in, n_in, o_in, false); //interpolate y dir, v1 is returned
+    interp3(w_out, w_in, x1, y1, z1, m_out, n_out, o_out, m_in, n_in, o_in, false); //interpolate z dir, w1 is returned
 
     delete[] x1;
     delete[] y1;
     delete[] z1;
-
-    //for(int i=0;i<m2*n2*o2;i++){
-    //	u2[i]*=scale_n;
-    //	v2[i]*=scale_m;
-    //	w2[i]*=scale_o;
-    //}
-
 }
 
 
@@ -511,46 +505,40 @@ std::tuple<
         torch::Tensor,
         torch::Tensor,
         torch::Tensor> transformations_upsampleDeformationsCL(
+            torch::Tensor pInput_u_in,
+            torch::Tensor pInput_v_in,
+            torch::Tensor pInput_w_in,
+            torch::Tensor pOutput_size) {
 
-    torch::Tensor pInput_u,
-    torch::Tensor pInput_v,
-    torch::Tensor pInput_w,
-    torch::Tensor pInput_u2,
-    torch::Tensor pInput_v2,
-    torch::Tensor pInput_w2) {
+    int m_in = pInput_u_in.size(0);
+    int n_in = pInput_u_in.size(1);
+    int o_in = pInput_u_in.size(2);
 
-    int m = pInput_u.size(0);
-    int n = pInput_u.size(1);
-    int o = pInput_u.size(2);
+    int m_out = pOutput_size[0].item<int>();
+    int n_out = pOutput_size[1].item<int>();
+    int o_out = pOutput_size[2].item<int>();
 
-    int m2 = pInput_u2.size(0);
-    int n2 = pInput_u2.size(1);
-    int o2 = pInput_u2.size(2);
+    torch::Tensor input_u_in_copy = pInput_u_in.clone();
+    torch::Tensor input_v_in_copy = pInput_v_in.clone();
+    torch::Tensor input_w_in_copy = pInput_w_in.clone();
 
-    torch::Tensor input_u_copy = pInput_u.clone();
-    torch::Tensor input_v_copy = pInput_v.clone();
-    torch::Tensor input_w_copy = pInput_w.clone();
-    torch::Tensor input_u2_copy = pInput_u2.clone();
-    torch::Tensor input_v2_copy = pInput_v2.clone();
-    torch::Tensor input_w2_copy = pInput_w2.clone();
+    float* u_in = input_u_in_copy.data_ptr<float>();
+    float* v_in = input_v_in_copy.data_ptr<float>();
+    float* w_in = input_w_in_copy.data_ptr<float>();
 
-    float* u = input_u_copy.data_ptr<float>();
-    float* v = input_v_copy.data_ptr<float>();
-    float* w = input_w_copy.data_ptr<float>();
-    float* u2 = input_u2_copy.data_ptr<float>();
-    float* v2 = input_v2_copy.data_ptr<float>();
-    float* w2 = input_w2_copy.data_ptr<float>();
-
-
+    float* u_out = new float[m_out*n_out*o_out];
+    float* v_out = new float[m_out*n_out*o_out];
+    float* w_out = new float[m_out*n_out*o_out];
     // cout<<"m"<<m;
     // cout<<"n"<<n;
     // cout<<"o"<<o;
 
-    upsampleDeformationsCL(u, v, w, u2, v2, w2, m, n, o, m2, n2, o2);
+    upsampleDeformationsCL(u_out, v_out, w_out, u_in, v_in, w_in,
+        m_out, n_out, o_out, m_in, n_in, o_in);
 
-    std::vector<float> new_u{u, u + m*n*o};
-    std::vector<float> new_v{v, v + m*n*o};
-    std::vector<float> new_w{w, w + m*n*o};
+    std::vector<float> new_u{u_out, u_out + m_out*n_out*o_out};
+    std::vector<float> new_v{v_out, v_out + m_out*n_out*o_out};
+    std::vector<float> new_w{w_out, w_out + m_out*n_out*o_out};
 
     auto options = torch::TensorOptions();
 
@@ -558,8 +546,8 @@ std::tuple<
             torch::Tensor,
             torch::Tensor,
             torch::Tensor>(
-        torch::from_blob(new_u.data(), {m,n,o}, options).clone(),
-        torch::from_blob(new_v.data(), {m,n,o}, options).clone(),
-        torch::from_blob(new_w.data(), {m,n,o}, options).clone()
+        torch::from_blob(new_u.data(), {m_out,n_out,o_out}, options).clone(),
+        torch::from_blob(new_v.data(), {m_out,n_out,o_out}, options).clone(),
+        torch::from_blob(new_w.data(), {m_out,n_out,o_out}, options).clone()
     );
 }

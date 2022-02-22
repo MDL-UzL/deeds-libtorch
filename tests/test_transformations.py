@@ -340,8 +340,8 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        INPUT_SIZE = torch.Size((2,2,2))
-        UPSAMPLED_SIZE =  torch.Size((4,4,4))
+        INPUT_SIZE = torch.Size((3,3,3))
+        UPSAMPLED_SIZE =  (7,7,7)
 
         DELTA_VAL = +5.
 
@@ -349,9 +349,9 @@ class TestTransformations(unittest.TestCase):
         SIZE_HELPER_FIELD = torch.zeros(UPSAMPLED_SIZE)
 
         ##Generate input flow field
-        u_input_flow = torch.zeros(INPUT_SIZE)
-        v_input_flow = torch.zeros(INPUT_SIZE)
-        w_input_flow = torch.zeros(INPUT_SIZE)
+        u_input_flow = torch.rand(INPUT_SIZE)
+        v_input_flow = torch.rand(INPUT_SIZE)
+        w_input_flow = torch.rand(INPUT_SIZE)
 
         u_input_flow[0,0,0] = -2.0*(DELTA_VAL) # u displacement
         u_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
@@ -373,8 +373,7 @@ class TestTransformations(unittest.TestCase):
         (cpp_upsampled_u,
          cpp_upsampled_v,
          cpp_upsampled_w) = CPP_APPLY_BCV_MODULE.transformations_upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
-                u_input_flow, v_input_flow, w_input_flow,
+                u_input_flow, v_input_flow, w_input_flow, torch.Tensor(UPSAMPLED_SIZE),
             )
         print(cpp_upsampled_u)
 
@@ -383,7 +382,6 @@ class TestTransformations(unittest.TestCase):
         print("\nRunning torch 'upsampleDeformationsCL': torch_upsampled_u")
         torch_upsampled_u, torch_upsampled_v, torch_upsampled_w = \
             upsampleDeformationsCL(
-                SIZE_HELPER_FIELD, SIZE_HELPER_FIELD, SIZE_HELPER_FIELD,
                 u_input_flow, v_input_flow, w_input_flow,
                 UPSAMPLED_SIZE
             )

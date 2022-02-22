@@ -282,53 +282,43 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
     return u1, v1, w1, u2, v2, w2
 
 
-def upsampleDeformationsCL(u_out, v_out, w_out, u, v, w, USE_CONSISTENT_TORCH=False):
+def upsampleDeformationsCL(u_in, v_in, w_in, output_shape, USE_CONSISTENT_TORCH=False):
 
     # USE_CONSISTENT_TORCH=True
 
-    assert u.dim() == v.dim() == w.dim() == 3,\
+    assert u_in.dim() == v_in.dim() == w_in.dim() == 3,\
         "Input displacements must be 3-dimensional."
-    assert u.shape == v.shape == w.shape,\
+    assert u_in.shape == v_in.shape == w_in.shape,\
         "Displacement field sizes must match."
 
     if USE_CONSISTENT_TORCH:
-        u = u.unsqueeze(0).unsqueeze(0)
-        v = v.unsqueeze(0).unsqueeze(0)
-        w = w.unsqueeze(0).unsqueeze(0)
+        u_in = u_in.unsqueeze(0).unsqueeze(0)
+        v_in = v_in.unsqueeze(0).unsqueeze(0)
+        w_in = w_in.unsqueeze(0).unsqueeze(0)
         return (
-            torch.nn.functional.interpolate(u, size=u_out.shape, mode='trilinear', align_corners=False).squeeze(),
-            torch.nn.functional.interpolate(v, size=u_out.shape, mode='trilinear', align_corners=False).squeeze(),
-            torch.nn.functional.interpolate(w, size=u_out.shape, mode='trilinear', align_corners=False).squeeze()
+            torch.nn.functional.interpolate(u_in, size=output_shape, mode='trilinear', align_corners=False).squeeze(),
+            torch.nn.functional.interpolate(v_in, size=output_shape, mode='trilinear', align_corners=False).squeeze(),
+            torch.nn.functional.interpolate(w_in, size=output_shape, mode='trilinear', align_corners=False).squeeze()
         )
 
-    #u1,v1,w1-flow field
-    #u,v,w-gridded flow field
-    u2=u
-    v2=v
-    w2=w
-    D1, H1, W1 = u_out.shape #Full size flow field shape
-    D2, H2, W2 = u.shape  #gridded flow field shape
-
     #scaling
-    scale_d=D1/D2
-    scale_h=H1/H2
-    scale_w=W1/W2
+    scale_m, scale_n, scale_o = torch.tensor(output_shape) / torch.tensor(u_in.shape)
 
     #initializing helper variables
-    X1=torch.zeros((D1,H1,W1))
-    Y1=torch.zeros((D1,H1,W1))
-    Z1=torch.zeros((D1,H1,W1))
-    for i in range(D1):
-        for j in range(H1):
-            for k in range(W1):
-                X1[i,j,k]=j/scale_h
-                Y1[i,j,k]=k/scale_w
-                Z1[i,j,k]=i/scale_d
+    X1 = torch.zeros(output_shape)
+    Y1 = torch.zeros(output_shape)
+    Z1 = torch.zeros(output_shape)
 
+    for k in range(output_shape[0]):
+        for j in range(output_shape[1]):
+            for i in range(output_shape[2]):
+                X1[k,j,i]=j/scale_n
+                Y1[k,j,i]=i/scale_m
+                Z1[k,j,i]=k/scale_o
 
     #interpolating
-    u_out = interp3(u2,X1,Y1,Z1,(D1,H1,W1),flag=False)
-    v_out = interp3(v2,X1,Y1,Z1,(D1,H1,W1),flag=False)
-    w_out = interp3(w2,X1,Y1,Z1,(D1,H1,W1),flag=False)
+    u_out = interp3(u_in, X1, Y1, Z1, output_shape, flag=False)
+    v_out = interp3(v_in, X1, Y1, Z1, output_shape, flag=False)
+    w_out = interp3(w_in, X1, Y1, Z1, output_shape, flag=False)
 
     return u_out, v_out ,w_out
