@@ -76,13 +76,13 @@ class TestApplyBCV(unittest.TestCase):
         AFFINE_MATRIX_FILE = Path(TEST_BASE_DIR, "./linear_bcv_output/linear_bcv_affine_matrix.txt").resolve()
 
         CPP_APPLY_BCV_OUTPUT_FILE = Path(OUTPUT_DIR, "cpp_apply_bcv_label_output.nii.gz").resolve()
-        import numpy as np
-        ZERO_FLOW_INPUT_FILE = "./zero_flow"
-        float_array = np.zeros((180//4,140//4,190//4,3)).astype('float32')
-        output_file = open(ZERO_FLOW_INPUT_FILE+"_displacements.dat", 'wb')
-        float_array.tofile(output_file)
-        output_file.close()
-        FLOW_INPUT_FILE = ZERO_FLOW_INPUT_FILE
+        # import numpy as np
+        # ZERO_FLOW_INPUT_FILE = "./zero_flow"
+        # float_array = np.zeros((180//4,140//4,190//4,3)).astype('float32')
+        # output_file = open(ZERO_FLOW_INPUT_FILE+"_displacements.dat", 'wb')
+        # float_array.tofile(output_file)
+        # output_file.close()
+        # FLOW_INPUT_FILE = ZERO_FLOW_INPUT_FILE
         case_args_cpp = [
             sys.argv[0], # Add the name of the calling programm
             '-M', str(MOVING_INPUT_FILE),
@@ -132,12 +132,16 @@ class TestApplyBCV(unittest.TestCase):
         CPP_APPLY_BCV_OUTPUT_FILE = Path(OUTPUT_DIR, "cpp_apply_bcv_label_output.nii.gz").resolve()
 
         import numpy as np
-        ZERO_FLOW_INPUT_FILE = Path(OUTPUT_DIR, "./zero_flow")
-        float_array = np.zeros((140//4,140//4,140//4,3)).astype('float32')
-        output_file = open(str(ZERO_FLOW_INPUT_FILE)+"_displacements.dat", 'wb')
+        ONE_FLOW_INPUT_FILE = Path(OUTPUT_DIR, "./one_flow")
+        float_array = np.zeros((3, 140//4,140//4,140//4)).astype('float32')
+        float_array[2, ...] = -10.0
+        float_array[1, ...] = 5.0
+        float_array[0, ...] = 3.0
+
+        output_file = open(str(ONE_FLOW_INPUT_FILE)+"_displacements.dat", 'wb')
         float_array.tofile(output_file)
         output_file.close()
-        FLOW_INPUT_FILE = ZERO_FLOW_INPUT_FILE
+        FLOW_INPUT_FILE = ONE_FLOW_INPUT_FILE
 
         case_args_cpp = [
             sys.argv[0], # Add the name of the calling programm
@@ -180,6 +184,6 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestApplyBCV()
     # tests.test_main_case_two()
-    tests.test_main_case_three()
+    # tests.test_main_case_three()
     # tests.test_main_case_four()
-    # tests.test_main_case_five()
+    tests.test_main_case_five()
