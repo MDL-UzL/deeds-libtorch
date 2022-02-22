@@ -304,6 +304,7 @@ def upsampleDeformationsCL(u_in, v_in, w_in, output_shape, USE_CONSISTENT_TORCH=
         )
 
     #scaling
+    m_out, n_out, o_out = output_shape
     scale_m, scale_n, scale_o = torch.tensor(output_shape) / torch.tensor(u_in.shape)
 
     #initializing helper variables
@@ -311,16 +312,20 @@ def upsampleDeformationsCL(u_in, v_in, w_in, output_shape, USE_CONSISTENT_TORCH=
     Y1 = torch.zeros(output_shape)
     Z1 = torch.zeros(output_shape)
 
-    for k in range(output_shape[0]):
-        for j in range(output_shape[1]):
-            for i in range(output_shape[2]):
-                X1[k,j,i]=j/scale_n
-                Y1[k,j,i]=i/scale_m
-                Z1[k,j,i]=k/scale_o
+    for k in range(o_out):
+        for j in range(n_out):
+            for i in range(m_out):
+                X1[i,j,k]=j/scale_n
+                Y1[i,j,k]=i/scale_m
+                Z1[i,j,k]=k/scale_o
 
     #interpolating
     u_out = interp3(u_in, output_shape, X1, Y1, Z1, flag=False)
     v_out = interp3(v_in, output_shape, X1, Y1, Z1, flag=False)
     w_out = interp3(w_in, output_shape, X1, Y1, Z1, flag=False)
+
+    u_out = u_out.permute(2,1,0).reshape(output_shape)
+    v_out = v_out.permute(2,1,0).reshape(output_shape)
+    w_out = w_out.permute(2,1,0).reshape(output_shape)
 
     return u_out, v_out ,w_out

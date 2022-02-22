@@ -349,15 +349,6 @@ class TestTransformations(unittest.TestCase):
         v_input_flow = torch.rand(INPUT_SIZE)
         w_input_flow = torch.rand(INPUT_SIZE)
 
-        u_input_flow[0,0,0] = -2.0*(DELTA_VAL) # u displacement
-        u_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
-
-        v_input_flow[0,0,0] = -3.0*(DELTA_VAL) # u displacement
-        v_input_flow[0,0,1] = 2.0*(DELTA_VAL) # u displacement
-
-        w_input_flow[1,0,0] = -3.0*(DELTA_VAL) # u displacement
-        w_input_flow[0,0,1] = 5.0*(DELTA_VAL) # u displacement
-
         #########################################################
         # Get cpp output
         print("\Input for deeds 'upsampleDeformationsCL': u_input_flow")
