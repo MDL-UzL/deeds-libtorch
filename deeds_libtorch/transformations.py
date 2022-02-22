@@ -4,17 +4,16 @@ import torch
 from torch.functional import align_tensors
 import torch.nn.functional as F
 from torch.utils.cpp_extension import load
-
-
+from tqdm import tqdm
 
 def jacobians(x_disp_field, y_disp_field, z_disp_field, USE_CONSISTENT_TORCH = False):
     # Returns outsz_y=DxHxW jacobian matrices (3x3) of displacements per dimension
     #
     # Jacobian for a single data point (x,y,z) is
     #
-    #   d_x_disp_field/dx  d_x_disp_field/dy  d_x_disp_field/dz
-    #   d_y_disp_field/dx  d_y_disp_field/dy  d_y_disp_field/dz
-    #   d_z_disp_field/dx  d_z_disp_field/dy  d_z_disp_field/dz
+    #   d_x_disp_field/x1_deltas  d_x_disp_field/y1_deltas  d_x_disp_field/z1_deltas
+    #   d_y_disp_field/x1_deltas  d_y_disp_field/y1_deltas  d_y_disp_field/z1_deltas
+    #   d_z_disp_field/x1_deltas  d_z_disp_field/y1_deltas  d_z_disp_field/z1_deltas
 
     assert x_disp_field.shape == y_disp_field.shape == z_disp_field.shape, \
         "Displacement field sizes must match."
@@ -157,35 +156,38 @@ def vol_filter(image_in,sigma,kernel_sz=1,dim=3):
 
 
 
-def interp3(input, x1, y1, z1, output_shape, flag, USE_CONSISTENT_TORCH=False):
+def interp3(input, output_shape, x1, y1, z1, flag, USE_TORCH_FUNCTION=False, USE_CONSISTENT_TORCH=False):
 
     insz_x, insz_y, insz_z = input.shape
     outsz_x, outsz_y, outsz_z =  output_shape
 
 
-    if not USE_CONSISTENT_TORCH:
-        interp = torch.zeros(output_shape)
+    if USE_TORCH_FUNCTION:
+        interp = torch.nn.functional.interpolate(input.unsqueeze(0).unsqueeze(0), size=output_shape).squeeze(0).squeeze(0)
+        return interp
+
+    elif not USE_CONSISTENT_TORCH:
         x1 = x1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         y1 = y1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         z1 = z1.reshape(outsz_z, outsz_y, outsz_x).permute(2,1,0)
         input = input.reshape(insz_z,insz_y,insz_x).permute(1,2,0)
-    else:
-        return torch.nn.functional.interpolate(input.unsqueeze(0).unsqueeze(0), size=output_shape).squeeze(0).squeeze(0)
 
-    def clamp_xyz(x,y,z):
-        if USE_CONSISTENT_TORCH:
+    interp = torch.zeros(output_shape)
+    if USE_CONSISTENT_TORCH:
+        def clamp_xyz(x,y,z):
             return (
                 min(max(x,0), insz_x-1),
                 min(max(y,0), insz_y-1),
                 min(max(z,0), insz_z-1)
             )
-
-        return (
-            # We have switched index clamping in original implementation
-            min(max(x,0),insz_y-1),
-            min(max(y,0),insz_x-1),
-            min(max(z,0),insz_z-1)
-        )
+    else:
+        def clamp_xyz(x,y,z):
+            return (
+                # We have switched index clamping in original implementation
+                min(max(x,0),insz_y-1),
+                min(max(y,0),insz_x-1),
+                min(max(z,0),insz_z-1)
+            )
 
     for k in range(outsz_z):
         for j in range(outsz_y):
@@ -241,9 +243,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
 
     for epoch in range(epochs):
         #interpolatioing field 2 by compositing with field 1..
-        u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
-        v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
-        w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        u1=interp3(u2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
+        v1=interp3(v2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
+        w1=interp3(w2_temp,u1_temp,v1_temp,w1_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
 
         #composition
         u1=torch.mul(u1_temp,0.5)+torch.mul(u1,-0.5)
@@ -251,9 +253,9 @@ def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
         w1=torch.mul(w1_temp,0.5)+torch.mul(w1,-0.5)
 
         #interpolating field 1 by composition with field2
-        u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
-        v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
-        w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH)
+        u2=interp3(u1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
+        v2=interp3(v1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
+        w2=interp3(w1_temp,u2_temp,v2_temp,w2_temp,output_shape,True, USE_CONSISTENT_TORCH=USE_CONSISTENT_TORCH, USE_TORCH_FUNCTION=False)
 
         #composition
         u2=torch.mul(u2_temp,0.5)+torch.mul(u2,-0.5)
@@ -317,8 +319,8 @@ def upsampleDeformationsCL(u_in, v_in, w_in, output_shape, USE_CONSISTENT_TORCH=
                 Z1[k,j,i]=k/scale_o
 
     #interpolating
-    u_out = interp3(u_in, X1, Y1, Z1, output_shape, flag=False)
-    v_out = interp3(v_in, X1, Y1, Z1, output_shape, flag=False)
-    w_out = interp3(w_in, X1, Y1, Z1, output_shape, flag=False)
+    u_out = interp3(u_in, output_shape, X1, Y1, Z1, flag=False)
+    v_out = interp3(v_in, output_shape, X1, Y1, Z1, flag=False)
+    w_out = interp3(w_in, output_shape, X1, Y1, Z1, flag=False)
 
     return u_out, v_out ,w_out

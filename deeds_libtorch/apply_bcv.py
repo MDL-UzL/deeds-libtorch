@@ -39,11 +39,11 @@ def main(argv, mod):
     #reading affine matrix
     if(args.affine_mat):
         print("----Reading affine matrix---")
-        X = read_affine_file(args.affine_mat)#1d list-reshape to(3,4)
-        print(X)
+        affine_mat = read_affine_file(args.affine_mat)#1d list-reshape to(3,4)
+        print(affine_mat)
     else:
         print("---Using identity transform----")
-        X=torch.eye(4,3)#matrix for identity transform
+        affine_mat = torch.eye(4,3)#matrix for identity transform
 
     #reading displacement field
     print("---Reading displacement field---")
@@ -56,21 +56,16 @@ def main(argv, mod):
     grid_step=round(math.pow(grid_size/sample_sz,0.3333333))
     print("---Grid step---:",grid_step)
 
-    #initializing flow field-full field
-    ux=torch.zeros((D,H,W))
-    vx=torch.zeros((D,H,W))
-    wx=torch.zeros((D,H,W))
-
     #creating gridded flow field
     u1 = disp_field[0]
     v1 = disp_field[1]
     w1 = disp_field[2]
 
     #doing Upsampling for the field
-    u1_,v1_,w1_ = upsampleDeformationsCL(ux,vx,wx,u1,v1,w1, USE_CONSISTENT_TORCH=True)
-
+    upsampled_u, upsampled_v, upsampled_w = upsampleDeformationsCL(u1,v1,w1, (D,H,W), USE_CONSISTENT_TORCH=True)
+    # upsampled_u, upsampled_v, upsampled_w = torch.load("u_out.pth"), torch.load("v_out.pth"), torch.load("w_out.pth")
     #warping segmentation
-    warped_seg = warpAffineS(mov_img,X,u1_,v1_,w1_).to(device)
+    warped_seg = warpAffineS(mov_img, affine_mat, upsampled_u, upsampled_v, upsampled_w).to(device)
 
     #writing the warped niftii file
     save_nifti(warped_seg, args.deformed, header=header)

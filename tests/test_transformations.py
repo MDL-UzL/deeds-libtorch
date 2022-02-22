@@ -111,7 +111,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        input_size = (1,3,3)
+        input_size = (3,3,3)
         _input = torch.zeros(input_size)
         _input[0,0,0] = 1.
         _input[0,-1,-1] = 10
@@ -119,7 +119,7 @@ class TestTransformations(unittest.TestCase):
         print("'interp3' input:")
         print(_input)
 
-        output_size = (4,6,3)
+        output_size = (7,20,20)
 
         scale_m, scale_n, scale_o = [out_s/in_s for out_s, in_s in zip(output_size, input_size)]
 
@@ -148,10 +148,9 @@ class TestTransformations(unittest.TestCase):
         # Get torch output
         print("\nRunning torch 'interp3': ")
         torch_interp3 = interp3(
-            _input,
+            _input, output_size,
             x1, y1, z1,
-            output_size,
-            flag
+            flag, USE_TORCH_FUNCTION=False, USE_CONSISTENT_TORCH=False
         )
 
         #########################################################
@@ -341,12 +340,9 @@ class TestTransformations(unittest.TestCase):
         #########################################################
         # Prepare inputs
         INPUT_SIZE = torch.Size((3,3,3))
-        UPSAMPLED_SIZE =  (7,7,7)
+        UPSAMPLED_SIZE = D,H,W =  (7,7,7)
 
         DELTA_VAL = +5.
-
-        ## Generate some artificial displacements for x,y,z, fullsize / upsampled
-        SIZE_HELPER_FIELD = torch.zeros(UPSAMPLED_SIZE)
 
         ##Generate input flow field
         u_input_flow = torch.rand(INPUT_SIZE)
@@ -373,7 +369,7 @@ class TestTransformations(unittest.TestCase):
         (cpp_upsampled_u,
          cpp_upsampled_v,
          cpp_upsampled_w) = CPP_APPLY_BCV_MODULE.transformations_upsampleDeformationsCL(
-                u_input_flow, v_input_flow, w_input_flow, torch.Tensor(UPSAMPLED_SIZE),
+                u_input_flow, v_input_flow, w_input_flow, torch.Tensor((D,H,W)),
             )
         print(cpp_upsampled_u)
 
@@ -389,17 +385,11 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_upsampled_u, cpp_upsampled_u,
-            rtol=1e-05, atol=1e-08, equal_nan=False
-        ), "Tensors do not match"
+        assert test_equal_tensors(torch_upsampled_u, cpp_upsampled_u), "Tensors do not match"
 
-        assert torch.allclose(torch_upsampled_v, cpp_upsampled_v,
-            rtol=1e-05, atol=1e-08, equal_nan=False
-        ), "Tensors do not match"
+        assert test_equal_tensors(torch_upsampled_v, cpp_upsampled_v), "Tensors do not match"
 
-        assert torch.allclose(torch_upsampled_w, cpp_upsampled_w,
-            rtol=1e-05, atol=1e-08, equal_nan=False
-        ), "Tensors do not match"
+        assert test_equal_tensors(torch_upsampled_w, cpp_upsampled_w), "Tensors do not match"
 
 
 

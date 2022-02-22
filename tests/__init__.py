@@ -45,8 +45,8 @@ else:
 
 
 def test_equal_tensors(tensor_a, tensor_b, lazy=False):
-    RTOL = 1e-05
-    ATOL = 1e-08
+    RTOL = 1e-03
+    ATOL = 1e-06
     UNEQ_MAX_RATIO = 0.005
 
     if lazy:

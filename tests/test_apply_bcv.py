@@ -131,17 +131,17 @@ class TestApplyBCV(unittest.TestCase):
 
         CPP_APPLY_BCV_OUTPUT_FILE = Path(OUTPUT_DIR, "cpp_apply_bcv_label_output.nii.gz").resolve()
 
-        import numpy as np
-        ONE_FLOW_INPUT_FILE = Path(OUTPUT_DIR, "./one_flow")
-        float_array = np.zeros((3, 140//4,140//4,140//4)).astype('float32')
-        float_array[2, ...] = -10.0
-        float_array[1, ...] = 5.0
-        float_array[0, ...] = 3.0
+        # import numpy as np
+        # ONE_FLOW_INPUT_FILE = Path(OUTPUT_DIR, "./one_flow")
+        # float_array = np.zeros((3, 140//4,140//4,140//4)).astype('float32')
+        # float_array[2, ...] = -10.0
+        # float_array[1, ...] = 5.0
+        # float_array[0, ...] = 3.0
 
-        output_file = open(str(ONE_FLOW_INPUT_FILE)+"_displacements.dat", 'wb')
-        float_array.tofile(output_file)
-        output_file.close()
-        FLOW_INPUT_FILE = ONE_FLOW_INPUT_FILE
+        # output_file = open(str(ONE_FLOW_INPUT_FILE)+"_displacements.dat", 'wb')
+        # float_array.tofile(output_file)
+        # output_file.close()
+        # FLOW_INPUT_FILE = ONE_FLOW_INPUT_FILE
 
         case_args_cpp = [
             sys.argv[0], # Add the name of the calling programm
