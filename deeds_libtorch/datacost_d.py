@@ -15,7 +15,7 @@ def warp(moving, affine_mat, w, v, u, mode='nearest'):
     displacements = torch.stack([w,v,u], dim=-1)
 
     # Rescale displacements
-    displacements = 2.*displacements/(torch.tensor([D,H,W]).view(1,1,1,3))
+    displacements = 2.*displacements/(torch.tensor([D-1,H-1,W-1]).view(1,1,1,3))
 
     # Switch x,z
     affine_mat[2,:], affine_mat[0,:] = affine_mat.clone()[0,:], affine_mat.clone()[2,:]
