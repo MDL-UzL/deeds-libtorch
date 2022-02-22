@@ -63,7 +63,6 @@ def main(argv, mod):
 
     #doing Upsampling for the field
     upsampled_u, upsampled_v, upsampled_w = upsampleDeformationsCL(u1,v1,w1, (D,H,W), USE_CONSISTENT_TORCH=True)
-    # upsampled_u, upsampled_v, upsampled_w = torch.load("u_out.pth"), torch.load("v_out.pth"), torch.load("w_out.pth")
     #warping segmentation
     warped_seg = warpAffineS(mov_img, affine_mat, upsampled_u, upsampled_v, upsampled_w).to(device)
 

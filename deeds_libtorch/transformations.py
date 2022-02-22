@@ -298,9 +298,9 @@ def upsampleDeformationsCL(u_in, v_in, w_in, output_shape, USE_CONSISTENT_TORCH=
         v_in = v_in.unsqueeze(0).unsqueeze(0)
         w_in = w_in.unsqueeze(0).unsqueeze(0)
         return (
-            torch.nn.functional.interpolate(u_in, size=output_shape, mode='trilinear', align_corners=False).squeeze(),
-            torch.nn.functional.interpolate(v_in, size=output_shape, mode='trilinear', align_corners=False).squeeze(),
-            torch.nn.functional.interpolate(w_in, size=output_shape, mode='trilinear', align_corners=False).squeeze()
+            torch.nn.functional.interpolate(u_in, size=output_shape, mode='trilinear', align_corners=True).squeeze(),
+            torch.nn.functional.interpolate(v_in, size=output_shape, mode='trilinear', align_corners=True).squeeze(),
+            torch.nn.functional.interpolate(w_in, size=output_shape, mode='trilinear', align_corners=True).squeeze()
         )
 
     #scaling
