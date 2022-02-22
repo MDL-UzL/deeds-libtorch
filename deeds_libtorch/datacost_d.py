@@ -6,16 +6,16 @@ import torch.nn.functional as F
 
 def warpAffineS(image_seg, affine_mat, u1, v1, w1):
 
-    affine_mat = affine_mat[:,:3].t()
+    affine_mat = affine_mat.t()[0:3]
     D, H, W = image_seg.shape
 
     affine_mat[2,:], affine_mat[0,:] = affine_mat.clone()[0,:], affine_mat.clone()[2,:]
     affine_mat[:,2], affine_mat[:,0] = affine_mat.clone()[:,0], affine_mat.clone()[:,2]
 
     # Rescale displacements
-    affine_mat[0,-1] = (affine_mat[0,-1]/D)*2.0#*affine_mat[0,0]
+    affine_mat[0,-1] = (affine_mat[0,-1]/W)*2.0#*affine_mat[0,0]
     affine_mat[1,-1] = (affine_mat[1,-1]/H)*2.0#*affine_mat[1,1]
-    affine_mat[2,-1] = (affine_mat[2,-1]/W)*2.0#*affine_mat[2,2]
+    affine_mat[2,-1] = (affine_mat[2,-1]/D)*2.0#*affine_mat[2,2]
 
     # Compensate sheering and scaling
     affine_mat[0,-1] = affine_mat[0,:4].sum()-1.0
