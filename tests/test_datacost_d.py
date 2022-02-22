@@ -30,8 +30,8 @@ class TestDatacostD(unittest.TestCase):
         y_disp_field = torch.zeros(D,H,W)
         z_disp_field = torch.zeros(D,H,W)
         T = torch.tensor([
-            [1.5, .5, 1.0, 1.],
-            [.0, 2., 0.0, 0.],
+            [1., .0, 0.1, 1.],
+            [.5, 1., 0.0, 0.],
             [.0, .0, 1., 0.],
             [0., 0., 0., 1.]]
         )
@@ -42,7 +42,7 @@ class TestDatacostD(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        torch_warped = log_wrapper(warpAffineS, input_img, T[0:3], x_disp_field , y_disp_field, z_disp_field)
+        torch_warped = log_wrapper(warpAffineS, input_img, T, x_disp_field , y_disp_field, z_disp_field)
         #########################################################
         # Assert difference
         assert test_equal_tensors(deeds_warped, torch_warped), "Tensors do not match"

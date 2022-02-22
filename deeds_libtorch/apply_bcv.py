@@ -41,7 +41,6 @@ def main(argv, mod):
         print("----Reading affine matrix---")
         X = read_affine_file(args.affine_mat)#1d list-reshape to(3,4)
         print(X)
-        X=X[:,:3].t()
     else:
         print("---Using identity transform----")
         X=torch.eye(4,3)#matrix for identity transform
