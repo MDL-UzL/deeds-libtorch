@@ -19,7 +19,7 @@ class TestApplyBCV(unittest.TestCase):
 
 
     def test_main_case_two(self):
-
+        assert False, "apply_bcv does only work for cubic input."
         TEST_BASE_DIR = Path(TEST_DATA_DIR, "case_2").resolve()
         TEST_OUTPUT_DIR = TEST_BASE_DIR.joinpath("test_output")
         TEST_OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
@@ -67,7 +67,7 @@ class TestApplyBCV(unittest.TestCase):
 
     #test for more image datas
     def test_main_case_three(self):
-
+        assert False, "apply_bcv does only work for cubic input."
         TEST_BASE_DIR = Path(TEST_DATA_DIR, "./case_3").resolve()
         OUTPUT_DIR = TEST_BASE_DIR.joinpath("test_output")
         OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
@@ -115,7 +115,10 @@ class TestApplyBCV(unittest.TestCase):
         cpp_warped = torch.tensor(nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata())
         torch_warped = torch.tensor(nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata())
 
-        assert test_equal_tensors(cpp_warped, torch_warped), "Tensors do not match"
+        assert test_equal_tensors(cpp_warped, torch_warped, lazy=True), "Tensors do not match"
+
+    def test_main_case_four(self):
+        raise NotImplementedError()
 
     def test_main_case_five(self):
 
@@ -177,6 +180,6 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestApplyBCV()
     # tests.test_main_case_two()
-    # tests.test_main_case_three()
+    tests.test_main_case_three()
     # tests.test_main_case_four()
-    tests.test_main_case_five()
+    # tests.test_main_case_five()
