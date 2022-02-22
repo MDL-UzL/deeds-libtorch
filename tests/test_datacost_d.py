@@ -26,23 +26,24 @@ class TestDatacostD(unittest.TestCase):
         D, H, W = input_img.shape
 
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
+        w = torch.ones(D,H,W)
+        v = torch.ones(D,H,W)
+        u = torch.ones(D,H,W)
+
         T = torch.tensor([
-            [.5, .0, 1.0, 0.],
-            [.0, .5, 0.0, 0.],
-            [.0, .0, 1., 0.],
-            [.5, 0., 0., 1.]]
+            [0.5, 0.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0, 0.0],
+            [1.0, 0.0, 2.0, 0.0],
+            [2.0, 0.0, 1.0, 1.0]]
         )
 
         #########################################################
         # Get cpp output
-        deeds_warped = log_wrapper(CPP_APPLY_BCV_MODULE.datacost_d_warpAffineS, input_img, T, x_disp_field, y_disp_field, z_disp_field)
+        deeds_warped = log_wrapper(CPP_APPLY_BCV_MODULE.datacost_d_warpAffineS, input_img, T, w, v, u)
 
         #########################################################
         # Get torch output
-        torch_warped = log_wrapper(warpAffineS, input_img, T.t(), x_disp_field , y_disp_field, z_disp_field)
+        torch_warped = log_wrapper(warpAffineS, input_img, T.t(), w, v, u)
         #########################################################
         # Assert difference
         assert test_equal_tensors(deeds_warped, torch_warped.permute(2,1,0)), "Tensors do not match"
