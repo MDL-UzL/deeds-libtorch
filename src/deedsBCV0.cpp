@@ -41,14 +41,19 @@ struct parameters{
     string fixed_file,moving_file,output_stem,moving_seg_file,affine_file,deformed_file;
 };
 
+#ifdef TORCH_EXTENSION_NAME
+    #include <torch/extension.h>
+#else
+    #include <torch/script.h>
+#endif
+
 #include "imageIOgzType.h"
 #include "transformations.h"
-#include "primsMST.h"
 #include "regularisation.h"
+#include "parseArguments.h"
+#include "primsMST.h"
 #include "MINDSSCbox.h"
 #include "dataCostD.h"
-#include "parseArguments.h"
-
 
 int main (int argc, char * const argv[]) {
 
@@ -205,7 +210,7 @@ int main (int argc, char * const argv[]) {
 	}
 
     float* warped0=new float[m*n*o];
-    warpAffine(warped0,im1,im1b,X,ux,vx,wx);
+    warpAffine(warped0,im1,im1b,X,ux,vx,wx); //DONE
 
 
     uint64_t* im1_mind=new uint64_t[m*n*o];
@@ -227,7 +232,7 @@ int main (int argc, char * const argv[]) {
 
         if(level==0|prev!=curr){
             gettimeofday(&time1, NULL);
-            descriptor(im1_mind,warped0,m,n,o,mind_step[level]);//im1 affine
+            descriptor(im1_mind,warped0,m,n,o,mind_step[level]);//im1 affine TODO
             descriptor(im1b_mind,im1b,m,n,o,mind_step[level]);
             gettimeofday(&time2, NULL);
             timeMIND+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
@@ -249,7 +254,7 @@ int main (int argc, char * const argv[]) {
 
         //FULL-REGISTRATION FORWARDS
         gettimeofday(&time1, NULL);
-		upsampleDeformationsCL(u0,v0,w0,u1,v1,w1,m1,n1,o1,m2,n2,o2);
+		upsampleDeformationsCL(u0,v0,w0,u1,v1,w1,m1,n1,o1,m2,n2,o2); //DONE
         upsampleDeformationsCL(ux,vx,wx,u0,v0,w0,m,n,o,m1,n1,o1);
         //float dist=landmarkDistance(ux,vx,wx,m,n,o,distsmm,casenum);
 		warpAffine(warped1,im1,im1b,X,ux,vx,wx);
@@ -264,14 +269,14 @@ int main (int argc, char * const argv[]) {
 		timeMIND+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
         cout<<"M"<<flush;
         gettimeofday(&time1, NULL);
-        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,args.alpha,RAND_SAMPLES);
+        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,args.alpha,RAND_SAMPLES); //TODO
         gettimeofday(&time2, NULL);
 
 		timeData+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
         cout<<"D"<<flush;
         gettimeofday(&time1, NULL);
-        primsGraph(im1b,ordered,parents,edgemst,step1,m,n,o);
-        regularisationCL(costall,u0,v0,w0,u1,v1,w1,hw1,step1,quant1,ordered,parents,edgemst);
+        primsGraph(im1b,ordered,parents,edgemst,step1,m,n,o); //TODO
+        regularisationCL(costall,u0,v0,w0,u1,v1,w1,hw1,step1,quant1,ordered,parents,edgemst); //TODO
         gettimeofday(&time2, NULL);
 		timeSmooth+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
         cout<<"S"<<flush;
@@ -280,7 +285,7 @@ int main (int argc, char * const argv[]) {
         gettimeofday(&time1, NULL);
 		upsampleDeformationsCL(u0,v0,w0,u1i,v1i,w1i,m1,n1,o1,m2,n2,o2);
         upsampleDeformationsCL(ux,vx,wx,u0,v0,w0,m,n,o,m1,n1,o1);
-		warpImageCL(warped1,im1b,warped0,ux,vx,wx);
+		warpImageCL(warped1,im1b,warped0,ux,vx,wx); //TODO
 		u1i=new float[sz1]; v1i=new float[sz1]; w1i=new float[sz1];
         gettimeofday(&time2, NULL);
 		timeTrans+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
@@ -306,14 +311,14 @@ int main (int argc, char * const argv[]) {
         cout<<"\nTime: MIND="<<timeMIND<<", data="<<timeData<<", MST-reg="<<timeSmooth<<", transf.="<<timeTrans<<"\n speed="<<2.0*(float)sz1*(float)len3/(timeData+timeSmooth)<<" dof/s\n";
 
         gettimeofday(&time1, NULL);
-        consistentMappingCL(u1,v1,w1,u1i,v1i,w1i,m1,n1,o1,step1);
+        consistentMappingCL(u1,v1,w1,u1i,v1i,w1i,m1,n1,o1,step1); // TODO
         gettimeofday(&time2, NULL);
         float timeMapping=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
 
         //cout<<"Time consistentMapping: "<<timeMapping<<"  \n";
 
 		//upsample deformations from grid-resolution to high-resolution (trilinear=1st-order spline)
-		float jac=jacobian(u1,v1,w1,m1,n1,o1,step1);
+		float jac=jacobian(u1,v1,w1,m1,n1,o1,step1); //DONE
 
         cout<<"SSD before registration: "<<SSD0<<" and after "<<SSD1<<"\n";
 		m2=m1; n2=n1; o2=o1;
@@ -381,3 +386,16 @@ int main (int argc, char * const argv[]) {
 
 	return 0;
 }
+
+
+
+#ifdef TORCH_EXTENSION_NAME
+    PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+        m.def("mind_ssc_descriptor", &mind_ssc_descriptor, "mind_ssc_descriptor");
+    }
+
+#else
+    TORCH_LIBRARY(cpp_deeds, m) {
+        m.def("mind_ssc_descriptor", &mind_ssc_descriptor);
+    }
+#endif

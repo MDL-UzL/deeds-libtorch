@@ -21,10 +21,10 @@ BUILD_JIT_DIR.mkdir(exist_ok=True)
 TEST_DATA_DIR.mkdir(exist_ok=True)
 
 CPP_APPLY_BCV_SOURCE = Path.joinpath(SRC_DIR, "applyBCV.cpp").resolve()
-CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-applyBCV.dylib").resolve()
+DEEDS_SOURCE = Path.joinpath(SRC_DIR, "deedsBCV0.cpp").resolve()
 
-CPP_TRANSFORMATIONS_SOURCE = Path.joinpath(SRC_DIR, "transformations.h").resolve()
-CPP_TRANSFORMATIONS_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-transformations.dylib").resolve()
+CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-applyBCV.dylib").resolve()
+DEEDS_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-deedsBCV.dylib").resolve()
 
 # Prepare cpp modules
 if os.environ.get('USE_JIT_COMPILE', None) == '1':
@@ -36,11 +36,17 @@ if os.environ.get('USE_JIT_COMPILE', None) == '1':
     CPP_APPLY_BCV_MODULE = load(name="cpp_apply_bcv_module", sources=[CPP_APPLY_BCV_SOURCE], build_directory=BUILD_JIT_DIR,
         # extra_cflags=extra_cflags, extra_ldflags=extra_ld_flags,
         verbose=True)
+    CPP_DEEDS_MODULE = load(name="cpp_deeds_module", sources=[DEEDS_SOURCE], build_directory=BUILD_JIT_DIR,
+        # extra_cflags=extra_cflags, extra_ldflags=extra_ld_flags,
+        verbose=True)
 
 else:
     # Use a precompiled library. For this the source needs to contain a 'TORCH_LIBRARY' definition
     torch.ops.load_library(CPP_APPLY_BCV_DYLIB)
     CPP_APPLY_BCV_MODULE = torch.ops.cpp_applyBCV
+
+    torch.ops.load_library(DEEDS_DYLIB)
+    CPP_APPLY_BCV_MODULE = torch.ops.cpp_deeds
 
 
 
