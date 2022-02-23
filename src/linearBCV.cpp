@@ -14,6 +14,12 @@
 #include "zlib.h"
 #include <sys/stat.h>
 
+#ifdef TORCH_EXTENSION_NAME
+    #include <torch/extension.h>
+#else
+    #include <torch/script.h>
+#endif
+
 using namespace std;
 //compile with openMP g++ linearBCV.cpp -O3 -std=c++11 -mavx2 -msse4.2 -pthread -fopenmp -lz -o linear11
 

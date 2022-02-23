@@ -15,6 +15,12 @@
 #include "zlib.h"
 #include <sys/stat.h>
 
+#ifdef TORCH_EXTENSION_NAME
+    #include <torch/extension.h>
+#else
+    #include <torch/script.h>
+#endif
+
 using namespace std;
 
 //some global variables
