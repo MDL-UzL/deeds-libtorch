@@ -1,4 +1,9 @@
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_BUILD_TYPE Debug)
+# Adjust your paths here if necessary
+# set(CMAKE_C_COMPILER=/usr/bin/gcc)
+# set(CMAKE_CXX_COMPILER=/usr/bin/g++)
+
 project(deeds-libtorch)
 
 list(APPEND CMAKE_PREFIX_PATH "./lib/libtorch")
@@ -46,11 +51,13 @@ endforeach()
 
 # Define library targets
 set(libraries_list
-    libtorch-applyBCV
+    lib-applyBCV
+    lib-deedsBCV
 )
 
 set(libraries_src_list
     src/applyBCV.cpp
+    src/deedsBCV0.cpp
 )
 
 list(LENGTH libraries_list len_libs)
