@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include <thread>
 #include <cstddef>
-#include "zlib.h"
+#include <zlib.h>
 #include <sys/stat.h>
 
 using namespace std;

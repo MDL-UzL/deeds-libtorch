@@ -23,21 +23,27 @@ TEST_DATA_DIR.mkdir(exist_ok=True)
 CPP_APPLY_BCV_SOURCE = Path.joinpath(SRC_DIR, "applyBCV.cpp").resolve()
 DEEDS_SOURCE = Path.joinpath(SRC_DIR, "deedsBCV0.cpp").resolve()
 
-CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblib-applyBCV.dylib").resolve()
-DEEDS_DYLIB = Path.joinpath(BUILD_DIR, "liblib-deedsBCV.dylib").resolve()
+CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblib-applyBCV.so").resolve()
+DEEDS_DYLIB = Path.joinpath(BUILD_DIR, "liblib-deedsBCV.so").resolve()
 
 # Prepare cpp modules
 if os.environ.get('USE_JIT_COMPILE', None) == '1':
-    extra_cflags = ["-O3", "-std=c++14", "-mavx2", "-msse4.2", "-pthread", "-g"] #"-fopenmp"]
-    extra_ldflags = [], #"-lz"]
-
     # Use just in time compilation. For this the source needs to contain a 'PYBIND11_MODULE' definition
     # os.environ['CXX'] = "/usr/local/bin/x86_64-apple-darwin20-gcc-11.2.0"
+
+    extra_cflags = []
+    # extra_cflags = ["-O3", "-std=c++14", "-mavx2", "-msse4.2", "-pthread", "-g"] #"-fopenmp"]
+
+    extra_ldflags = [
+        # "-L/usr/lib",
+        "-lz"
+        ]
+
     CPP_APPLY_BCV_MODULE = load(name="cpp_apply_bcv_module", sources=[CPP_APPLY_BCV_SOURCE], build_directory=BUILD_JIT_DIR,
-        # extra_cflags=extra_cflags, extra_ldflags=extra_ld_flags,
+        extra_cflags=extra_cflags, extra_ldflags=extra_ldflags,
         verbose=True)
     CPP_DEEDS_MODULE = load(name="cpp_deeds_module", sources=[DEEDS_SOURCE], build_directory=BUILD_JIT_DIR,
-        # extra_cflags=extra_cflags, extra_ldflags=extra_ld_flags,
+        extra_cflags=extra_cflags, extra_ldflags=extra_ldflags,
         verbose=True)
 
 else:
