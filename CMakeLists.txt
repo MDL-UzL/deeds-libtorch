@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 project(deeds-libtorch)
 
@@ -7,9 +6,9 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 find_package(Torch REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(OpenMP REQUIRED)
+# find_package(OpenMP REQUIRED) # OPENMP does currently not work for mac M1
 
-SET(CMAKE_CXX_FLAGS "-O3 -mavx2 -msse4.2")
+# SET(CMAKE_CXX_FLAGS "-O3 -mavx2 -msse4.2") # one of these create illegal hardware instructions
 
 # Define executable targets
 set(executables_list
@@ -40,8 +39,8 @@ foreach(idx RANGE ${executables_max_idx})
     target_link_libraries(${target_name} "${TORCH_LIBRARIES}")
     # Link against ZLIB
     target_link_libraries(${target_name} ZLIB::ZLIB)
-    # Link agains libomp
-    target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
+    # # Link agains libomp
+    # target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
 
 endforeach()
 
@@ -69,6 +68,6 @@ foreach(idx RANGE ${libs_max_idx})
     # Link against ZLIB
     target_link_libraries(${target_name} ZLIB::ZLIB)
     # Link agains libomp
-    target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
+    # target_link_libraries(${target_name} OpenMP::OpenMP_CXX)
 
 endforeach()
