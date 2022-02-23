@@ -42,7 +42,7 @@ def filter1D(img, weight, dim, padding_mode='replicate'):
     view[dim + 2] = -1
     view = view.long().tolist()
 
-    return F.conv3d(F.pad(img.view(B*C, 1, D, H, W), padding), weight.view(view)).view(B, C, D, H, W)
+    return F.conv3d(F.pad(img.view(B*C, 1, D, H, W), padding, mode=padding_mode), weight.view(view)).view(B, C, D, H, W)
 
 def mind_ssc(img, delta=1, sigma=0.8):
     # see http://mpheinrich.de/pub/miccai2013_943_mheinrich.pdf for details on the MIND-SSC descriptor
@@ -67,7 +67,6 @@ def mind_ssc(img, delta=1, sigma=0.8):
     # build kernel
     idx_shift1 = six_neighbourhood.unsqueeze(1).repeat(1,6,1).view(-1,3)[mask, :].long()
     idx_shift2 = six_neighbourhood.unsqueeze(0).repeat(6,1,1).view(-1,3)[mask, :].long()
-
     mshift1 = torch.zeros((12, 1, 3, 3, 3), device=device)
     mshift1.view(-1)[torch.arange(12, device=device) * 27 + idx_shift1[:,0] * 9 + idx_shift1[:, 1] * 3 + idx_shift1[:, 2]] = 1
     mshift2 = torch.zeros((12, 1, 3, 3, 3), device=device)
