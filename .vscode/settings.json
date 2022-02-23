@@ -1,7 +1,8 @@
 {
     "files.associations": {
         "vector": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "functional": "cpp"
     },
     "python.testing.unittestArgs": [
         "-v",

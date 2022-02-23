@@ -15,6 +15,13 @@
             "console": "integratedTerminal",
         },
         {
+            "name": "Python: test_transformations",
+            "type": "python",
+            "request": "launch",
+            "program": "./tests/test_transformations.py",
+            "console": "integratedTerminal",
+        },
+        {
             "name": "Python: applyBCV",
             "type": "python",
             "request": "launch",
@@ -37,6 +44,41 @@
             "request": "launch",
             "program": "./tests/test_apply_bcv.py",
             "console": "integratedTerminal",
-        }
+        },
+        {
+            "name": "(gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/Users/christianweihsbach/.poetry_x86_64/virtualenvs/deeds-libtorch-nGD5_2RE-py3.9/bin/python",
+            "processId": "${command:pickProcess}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+
+                //https://sourceware.org/gdb/wiki/PermissionsDarwin#Refresh_the_system.27s_certificates_and_code-signing_data
+            ]
+        },
+        {
+            "name": "Python C++ Debug",
+            "type": "pythoncpp",
+            "request": "launch",
+            "pythonLaunchName": "Python: Current File",
+            "cppConfig": "default (gdb) Attach"
+        },
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "/home/agaurav/main.py",
+        //     "console": "integratedTerminal",
+        //     "env": {
+        //         "LD_LIBRARY_PATH": ""
+        //     },
+        //     "cwd": "${workspaceRoot}"
+        // }
     ]
 }
