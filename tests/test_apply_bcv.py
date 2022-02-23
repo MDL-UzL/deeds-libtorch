@@ -174,7 +174,7 @@ class TestApplyBCV(unittest.TestCase):
         # Load files from disk again
         cpp_warped = torch.tensor(nib.load(CPP_APPLY_BCV_OUTPUT_FILE).get_fdata())
         torch_warped = torch.tensor(nib.load(TORCH_APPLY_BCV_OUTPUT_FILE).get_fdata())
-
+        # Hint: Upsampling of deformation field does not return same results for apply_bcv
         assert test_equal_tensors(cpp_warped, torch_warped, lazy=True), "Tensors do not match"
 
 
