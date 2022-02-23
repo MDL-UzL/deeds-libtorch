@@ -26,8 +26,8 @@ class TestDatacostD(unittest.TestCase):
         D, H, W = input_img.shape
 
         ## Generate some artificial displacements for x,y,z
-        w = torch.ones(D,H,W)
-        v = torch.zeros(D,H,W)
+        w = 1.2*torch.ones(D,H,W)
+        v = 1.5*torch.ones(D,H,W)
         u = torch.zeros(D,H,W)
 
         T = torch.tensor([
@@ -66,7 +66,7 @@ class TestDatacostD(unittest.TestCase):
 
         T = torch.tensor([
             [0.5, 0.0, 0.0, 0.0],
-            [0.2, 0.5, 0.0, 0.0],
+            [0.2, 2.5, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0]]
         )

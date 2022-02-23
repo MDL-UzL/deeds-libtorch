@@ -133,7 +133,7 @@ void distances(float* im1,float* d1,int m,int n,int o,int qs,int l){
 //__builtin_popcountll(left[i]^right[i]); absolute hamming distances
 void descriptor(uint64_t* mindq,float* im1,
     int m,int n,int o, //image dims
-    int qs){ //mind_step (chain values smaller than quantisation chain)
+    int qs, float* output_mind_twelve=0){ //mind_step (chain values smaller than quantisation chain)
 	timeval time1,time2;
 
     //MIND with self-similarity context
@@ -184,6 +184,8 @@ void descriptor(uint64_t* mindq,float* im1,
 
 
 #pragma omp parallel for
+    // float mind_twelve[m*n*o*12];
+
     for(int k=0;k<o;k++){ //iterate z
         //could be moved out of loop
         unsigned int tablei[6]={0,1,3,7,15,31}; //lookup table
@@ -234,14 +236,59 @@ void descriptor(uint64_t* mindq,float* im1,
                     tabled1*=power;
                 }
                 mindq[i+j*m+k*m*n]=accum; //one mind value for every coordinate xyz
+                for(int m_idx=0;m_idx<12;m_idx++){
+                    output_mind_twelve[m_idx+i*12+j*m*12+k*m*n*12] = mind1[m_idx];
+                }
+                std::cout<<"\nmind1=";
+                for(int pri=0;pri<12 ;pri++){
+                    std::cout<<mind1[pri]<<" ";
+                }
             }
         }
-    }
 
+    }
+    // std::cout<<"\nmindq=";
+    // for(int pri=0;pri<m*n*o ;pri++){
+	// 	std::cout<<mindq[pri]<<" ";
+	// }
+    // std::cout<<"\nmind_twelve=";
+    // for(int pri=0;pri<m*n*o*12 ;pri++){
+    //     std::cout<<output_mind_twelve[pri]<<" ";
+    // }
 
     gettimeofday(&time2, NULL);
     float timeMIND2=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
     delete[] d1;
 
 
+}
+
+std::tuple<torch::Tensor, torch::Tensor> mind_ssc_descriptor(
+    torch::Tensor image,
+    torch::Tensor pQuantisation_step) {
+
+    int m = image.size(0);
+    int n = image.size(1);
+    int o = image.size(2);
+
+    torch::Tensor image_copy = image.clone();
+
+    float* input_image = image_copy.data_ptr<float>();
+    int* quantisation_step = pQuantisation_step.data_ptr<int>();
+
+    uint64_t* output = new uint64_t[m*n*o];
+    float* output_mind_twelve = new float[m*n*o*12];
+
+    descriptor(output, input_image, m, n, o, *quantisation_step, output_mind_twelve);
+    std::vector<uint64_t> output_vect{output, output+m*n*o};
+    std::vector<float> output_mind_twelve_vect{output_mind_twelve, output_mind_twelve+m*n*o*12};
+
+    auto options = torch::TensorOptions().dtype(torch::kInt64);
+    auto float_options = torch::TensorOptions().dtype(torch::kFloat);
+    return std::tuple<
+            torch::Tensor,
+            torch::Tensor>(
+        torch::from_blob(output_vect.data(), {m,n,o}, options).clone(),
+        torch::from_blob(output_mind_twelve_vect.data(), {m,n,o,12}, float_options).clone()
+    );
 }

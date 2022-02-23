@@ -242,10 +242,11 @@ int64_t apply_bcv_main(int64_t _argc, std::vector<std::string> _argv) {
         m.def("transformations_consistentMappingCL", &transformations_consistentMappingCL,"transformations_consistentMappingCL");
         m.def("transformations_upsampleDeformationsCL", &transformations_upsampleDeformationsCL,"transformations_upsampleDeformationsCL");
         m.def("datacost_d_warpAffineS", &datacost_d_warpAffineS,"datacost_d_warpAffineS");
+        m.def("datacost_d_warpAffine", &datacost_d_warpAffine,"datacost_d_warpAffine");
     }
 
 #else
-    TORCH_LIBRARY(deeds_cpp, m) {
+    TORCH_LIBRARY(cpp_apply_bcv, m) {
         m.def("apply_bcv_main", &apply_bcv_main);
         m.def("transformations_jacobian", &transformations_jacobian);
         m.def("transformations_interp3", &transformations_interp3);
@@ -253,5 +254,6 @@ int64_t apply_bcv_main(int64_t _argc, std::vector<std::string> _argv) {
         m.def("transformations_consistentMappingCL", &transformations_consistentMappingCL);
         m.def("transformations_upsampleDeformationsCL", &transformations_upsampleDeformationsCL);
         m.def("datacost_d_warpAffineS", &datacost_d_warpAffineS);
+        m.def("datacost_d_warpAffine", &datacost_d_warpAffine);
     }
 #endif

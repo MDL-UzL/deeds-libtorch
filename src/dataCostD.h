@@ -313,10 +313,7 @@ void warpAffineS(short* warped,short* input,float* X,
 	// 	std::cout<<warped[pri]<<" ";
 	// }
 }
-void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float* v1,float* w1){
-    int m=image_m;
-    int n=image_n;
-    int o=image_o;
+void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float* v1,float* w1, int m=image_m, int n=image_n, int o=image_o){
     int sz=m*n*o;
 
     float ssd=0;
@@ -336,14 +333,15 @@ void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float*
                 float dx=x1-x; float dy=y1-y; float dz=z1-z;
 
 
-                warped[i+j*m+k*m*n]=(1.0-dx)*(1.0-dy)*(1.0-dz)*input[min(max(y,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]+
-                (1.0-dx)*dy*(1.0-dz)*input[min(max(y+1,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]+
-                dx*(1.0-dy)*(1.0-dz)*input[min(max(y,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z,0),o-1)*m*n]+
-                (1.0-dx)*(1.0-dy)*dz*input[min(max(y,0),m-1)+min(max(x,0),n-1)*m+min(max(z+1,0),o-1)*m*n]+
-                dx*dy*(1.0-dz)*input[min(max(y+1,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z,0),o-1)*m*n]+
-                (1.0-dx)*dy*dz*input[min(max(y+1,0),m-1)+min(max(x,0),n-1)*m+min(max(z+1,0),o-1)*m*n]+
-                dx*(1.0-dy)*dz*input[min(max(y,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z+1,0),o-1)*m*n]+
-                dx*dy*dz*input[min(max(y+1,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z+1,0),o-1)*m*n];
+                warped[i+j*m+k*m*n]=(1.0-dx)*(1.0-dy)*(1.0-dz)*input[min(max(y,0),m-1)
+                +min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]
+                +(1.0-dx)*dy*(1.0-dz) * input[min(max(y+1,0),m-1)+min(max(x,0),n-1)*m+min(max(z,0),o-1)*m*n]
+                +dx*(1.0-dy)*(1.0-dz) * input[min(max(y,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z,0),o-1)*m*n]
+                +(1.0-dx)*(1.0-dy)*dz * input[min(max(y,0),m-1)+min(max(x,0),n-1)*m+min(max(z+1,0),o-1)*m*n]
+                +dx*dy*(1.0-dz) *       input[min(max(y+1,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z,0),o-1)*m*n]
+                +(1.0-dx)*dy*dz *       input[min(max(y+1,0),m-1)+min(max(x,0),n-1)*m+min(max(z+1,0),o-1)*m*n]
+                +dx*(1.0-dy)*dz *       input[min(max(y,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z+1,0),o-1)*m*n]
+                +dx*dy*dz *             input[min(max(y+1,0),m-1)+min(max(x+1,0),n-1)*m+min(max(z+1,0),o-1)*m*n];
             }
         }
     }
@@ -368,36 +366,68 @@ void warpAffine(float* warped,float* input,float* im1b,float* X,float* u1,float*
 
 // libtorch unittest API
 torch::Tensor datacost_d_warpAffineS(
-    torch::Tensor image_in,
+    torch::Tensor moving,
     torch::Tensor pInput_T,
     torch::Tensor pInput_u1,
     torch::Tensor pInput_v1,
     torch::Tensor pInput_w1) {
 
-    torch::Tensor input_image_copy = image_in.clone();
+    torch::Tensor moving_copy = moving.clone();
     torch::Tensor input_u1_copy = pInput_u1.clone();
     torch::Tensor input_v1_copy = pInput_v1.clone();
     torch::Tensor input_w1_copy = pInput_w1.clone();
     torch::Tensor input_T_copy = pInput_T.clone();
 
-    int m = image_in.size(0);
-    int n = image_in.size(1);
-    int o = image_in.size(2);
+    int m = moving.size(0);
+    int n = moving.size(1);
+    int o = moving.size(2);
     float* u1 = input_u1_copy.data_ptr<float>();
     float* v1 = input_v1_copy.data_ptr<float>();
     float* w1 = input_w1_copy.data_ptr<float>();
     float* T = input_T_copy.data_ptr<float>();
 
-    short* input_img = input_image_copy.data_ptr<short>();
-    short* warp= new short[m*n*o];
+    short* input_moving = moving_copy.data_ptr<short>();
+    short* warped= new short[m*n*o];
 
-    warpAffineS(warp,input_img,T,u1,v1,w1, m, n, o);
+    warpAffineS(warped,input_moving,T,u1,v1,w1, m, n, o);
     //             std::cout<<"\nshort warp=";
     // for(int pri=0;pri<m*n*o ;pri++){
 	// 	std::cout<<warp[pri]<<" ";
 	// }
-    std::vector<short> warp_vect{warp, warp+m*n*o};
+    std::vector<short> warp_vect{warped, warped+m*n*o};
 
     auto options = torch::TensorOptions().dtype(torch::kShort);
+    return torch::from_blob(warp_vect.data(), {m,n,o}, options).clone();
+}
+
+torch::Tensor datacost_d_warpAffine(
+    torch::Tensor moving,
+    torch::Tensor pInput_T,
+    torch::Tensor pInput_u1,
+    torch::Tensor pInput_v1,
+    torch::Tensor pInput_w1) {
+
+    torch::Tensor moving_copy = moving.clone();
+    torch::Tensor input_u1_copy = pInput_u1.clone();
+    torch::Tensor input_v1_copy = pInput_v1.clone();
+    torch::Tensor input_w1_copy = pInput_w1.clone();
+    torch::Tensor input_T_copy = pInput_T.clone();
+
+    int m = moving.size(0);
+    int n = moving.size(1);
+    int o = moving.size(2);
+    float* u1 = input_u1_copy.data_ptr<float>();
+    float* v1 = input_v1_copy.data_ptr<float>();
+    float* w1 = input_w1_copy.data_ptr<float>();
+    float* T = input_T_copy.data_ptr<float>();
+
+    float* input_moving = moving_copy.data_ptr<float>();
+    float* dummy_compare_image = new float[m*n*o];
+    float* warped = new float[m*n*o];
+
+    warpAffine(warped,input_moving,dummy_compare_image,T,u1,v1,w1, m, n, o);
+    std::vector<float> warp_vect{warped, warped+m*n*o};
+
+    auto options = torch::TensorOptions().dtype(torch::kFloat);
     return torch::from_blob(warp_vect.data(), {m,n,o}, options).clone();
 }
