@@ -7,7 +7,7 @@ from contextlib import contextmanager
 # Settings
 os.environ['USE_JIT_COMPILE'] = '1'
 torch.set_printoptions(precision=4, sci_mode=False)
-LOG_VERBOSE = True
+LOG_VERBOSE = False
 
 # Prepare build dirs
 THIS_SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -23,12 +23,12 @@ TEST_DATA_DIR.mkdir(exist_ok=True)
 CPP_APPLY_BCV_SOURCE = Path.joinpath(SRC_DIR, "applyBCV.cpp").resolve()
 DEEDS_SOURCE = Path.joinpath(SRC_DIR, "deedsBCV0.cpp").resolve()
 
-CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-applyBCV.dylib").resolve()
-DEEDS_DYLIB = Path.joinpath(BUILD_DIR, "liblibtorch-deedsBCV.dylib").resolve()
+CPP_APPLY_BCV_DYLIB = Path.joinpath(BUILD_DIR, "liblib-applyBCV.dylib").resolve()
+DEEDS_DYLIB = Path.joinpath(BUILD_DIR, "liblib-deedsBCV.dylib").resolve()
 
 # Prepare cpp modules
 if os.environ.get('USE_JIT_COMPILE', None) == '1':
-    extra_cflags = ["-O3", "-std=c++14", "-mavx2", "-msse4.2", "-pthread"] #"-fopenmp"]
+    extra_cflags = ["-O3", "-std=c++14", "-mavx2", "-msse4.2", "-pthread", "-g"] #"-fopenmp"]
     extra_ldflags = [], #"-lz"]
 
     # Use just in time compilation. For this the source needs to contain a 'PYBIND11_MODULE' definition
@@ -46,7 +46,7 @@ else:
     CPP_APPLY_BCV_MODULE = torch.ops.cpp_applyBCV
 
     torch.ops.load_library(DEEDS_DYLIB)
-    CPP_APPLY_BCV_MODULE = torch.ops.cpp_deeds
+    CPP_DEEDS_MODULE = torch.ops.cpp_deeds
 
 
 

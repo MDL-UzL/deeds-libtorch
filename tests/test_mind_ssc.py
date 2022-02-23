@@ -10,7 +10,7 @@ import nibabel as nib
 from deeds_libtorch.mind_ssc import mind_ssc, filter1D
 
 
-from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_APPLY_BCV_MODULE, CPP_DEEDS_MODULE, test_equal_tensors, log_wrapper
+from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_DEEDS_MODULE, test_equal_tensors, log_wrapper
 
 def extract_features(binaries):
     D,H,W,DIGITS = binaries.shape
@@ -33,7 +33,7 @@ class TestMindSsc(unittest.TestCase):
 
         ## Generate some artificial displacements for x,y,z
         image = torch.zeros((D,H,W))
-        image[1,1,1] = 5
+        image[1,1,1] = 1
         #########################################################
         # Get cpp output
         cpp_mind_ssc_long_long, cpp_mind_ssc_twelve = CPP_DEEDS_MODULE.mind_ssc_descriptor(
@@ -44,7 +44,7 @@ class TestMindSsc(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        torch_mind_ssc = mind_ssc(image, QUANTISATION_STEP, sigma=0.0)
+        torch_mind_ssc = mind_ssc(image, QUANTISATION_STEP, sigma=10.0)
 
         torch_mind_ssc = torch_mind_ssc.reshape(12,D,H,W)
         # def binary(x, bits):
