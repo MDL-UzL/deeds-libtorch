@@ -31,8 +31,15 @@ if os.environ.get('USE_JIT_COMPILE', None) == '1':
     # Use just in time compilation. For this the source needs to contain a 'PYBIND11_MODULE' definition
     # os.environ['CXX'] = "/usr/local/bin/x86_64-apple-darwin20-gcc-11.2.0"
 
-    extra_cflags = []
-    # extra_cflags = ["-O3", "-std=c++14", "-mavx2", "-msse4.2", "-pthread", "-g"] #"-fopenmp"]
+    extra_cflags = [
+        # "-O3",
+        "-std=c++14",
+        # "-mavx2",
+        # "-msse4.2",
+        # "-pthread",
+        "-g",
+        # "-fopenmp"
+    ]
 
     extra_ldflags = [
         # "-L/usr/lib",

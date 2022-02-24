@@ -7,9 +7,7 @@ import timeit
 import numpy as np
 import nibabel as nib
 
-from deeds_libtorch.transformations import interp3, std_det_jacobians, vol_filter, upsampleDeformationsCL, consistentMappingCL, calc_inverse_consistent_diffeomorphic_field
-
-
+from deeds_libtorch.transformations import interp3, std_det_jacobians, vol_filter, upsampleDeformationsCL, consistentMappingCL, calc_consistent_diffeomorphic_field,inverse_consistency
 from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
 
 
@@ -22,7 +20,7 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 1
+        TIME_STEPS = 1
         D, H, W =  6, 6, 2
 
         DELTA_W = +6.
@@ -44,13 +42,13 @@ class TestTransformations(unittest.TestCase):
             u_disp,
             v_disp,
             w_disp,
-            torch.tensor([FACTOR], dtype=torch.int))
+            torch.tensor([TIME_STEPS], dtype=torch.int))
 
         #########################################################
         # Get torch output
         print("\nRunning torch 'std_det_jacobians': ")
         torch_std_det_jac = std_det_jacobians(
-            u_disp, v_disp, w_disp, FACTOR
+            u_disp, v_disp, w_disp, TIME_STEPS
         )
 
         #########################################################
@@ -80,7 +78,7 @@ class TestTransformations(unittest.TestCase):
         for k in range(o):
             for j in range(n):
                 for i in range(m):
-                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    x1[i,j,k]=i/scale_m; # x helper var -> stretching TIME_STEPS in x-dir (gridded_size/full_size) at every discrete x (full size)
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
@@ -128,7 +126,7 @@ class TestTransformations(unittest.TestCase):
         for k in range(o):
             for j in range(n):
                 for i in range(m):
-                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    x1[i,j,k]=i/scale_m; # x helper var -> stretching TIME_STEPS in x-dir (gridded_size/full_size) at every discrete x (full size)
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
@@ -177,7 +175,7 @@ class TestTransformations(unittest.TestCase):
         for k in range(o):
             for j in range(n):
                 for i in range(m):
-                    x1[i,j,k]=i/scale_m; # x helper var -> stretching factor in x-dir (gridded_size/full_size) at every discrete x (full size)
+                    x1[i,j,k]=i/scale_m; # x helper var -> stretching TIME_STEPS in x-dir (gridded_size/full_size) at every discrete x (full size)
                     y1[i,j,k]=j/scale_n; # y helper var
                     z1[i,j,k]=k/scale_o; # z helper var
 
@@ -234,8 +232,8 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 2**10
-        D, H, W =  4, 3, 3
+        TIME_STEPS = 4
+        D, H, W =  4, 4, 4
 
         ## Generate some artificial displacements for x,y,z
         u_disp = torch.zeros(D,H,W)
@@ -261,17 +259,16 @@ class TestTransformations(unittest.TestCase):
             inverse_u_disp,
             inverse_v_disp,
             inverse_w_disp,
-            torch.tensor([FACTOR], dtype=torch.int))
+            torch.tensor([TIME_STEPS], dtype=torch.int))
 
         #########################################################
         # Get torch output
         print("\nRunning torch 'consistent mapping': ")
-        torch_disp_field, torch_inverse_disp_field = calc_inverse_consistent_diffeomorphic_field(
+        torch_disp_field, torch_inverse_disp_field = calc_consistent_diffeomorphic_field(
             torch.stack([u_disp, v_disp, w_disp], dim=0).unsqueeze(0),
             torch.stack([inverse_u_disp, inverse_v_disp, inverse_w_disp], dim=0).unsqueeze(0),
-            # FACTOR,
-            np.log2(FACTOR),
-            iter_steps_override=10
+            TIME_STEPS,
+            ensure_inverse_consistency=True
         )
         torch_u, torch_v, torch_w = torch_disp_field.squeeze().tensor_split(3,0)
         torch_inverse_u, torch_inverse_v, torch_inverse_w = torch_inverse_disp_field.squeeze().tensor_split(3,0)
