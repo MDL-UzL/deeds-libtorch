@@ -7,7 +7,7 @@ import timeit
 import numpy as np
 import nibabel as nib
 
-from deeds_libtorch.transformations import interp3, std_det_jacobians, vol_filter, upsampleDeformationsCL, consistentMappingCL
+from deeds_libtorch.transformations import interp3, std_det_jacobians, vol_filter, upsampleDeformationsCL, consistentMappingCL, calc_inverse_consistent_diffeomorphic_field
 
 
 from __init__ import SRC_DIR, BUILD_DIR, BUILD_JIT_DIR, CPP_APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
@@ -30,82 +30,32 @@ class TestTransformations(unittest.TestCase):
         DELTA_D = +.5
 
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
+        u_disp = torch.rand(D,H,W)
+        v_disp = torch.rand(D,H,W)
+        w_disp = torch.rand(D,H,W)
 
-        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
-        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
+        u_disp[0,0,0] = -2.0*(DELTA_W/W) # u displacement
+        u_disp[0,0,1] = 2.0*(DELTA_W/W) # u displacement
 
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'jacobian': ")
         cpp_std_det_jac = CPP_APPLY_BCV_MODULE.transformations_jacobian(
-            x_disp_field,
-            y_disp_field,
-            z_disp_field,
+            u_disp,
+            v_disp,
+            w_disp,
             torch.tensor([FACTOR], dtype=torch.int))
 
         #########################################################
         # Get torch output
         print("\nRunning torch 'std_det_jacobians': ")
         torch_std_det_jac = std_det_jacobians(
-            x_disp_field, y_disp_field, z_disp_field, FACTOR
+            u_disp, v_disp, w_disp, FACTOR
         )
 
         #########################################################
         # Assert difference
         assert test_equal_tensors(torch_std_det_jac, cpp_std_det_jac)
-
-    def test_consistentMappingCL(self):
-
-        #########################################################
-        # Prepare inputs
-        FACTOR = 1
-        D, H, W =  6, 6, 2
-
-        DELTA_W = +6.
-        DELTA_H = +2.
-        DELTA_D = +.5
-
-        DELTA_W2 = +7.
-        DELTA_H2 = +3.
-        DELTA_D2 = +.6
-
-        ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
-
-        ##Generate 2nd flow field
-        x2_disp_field = torch.zeros(D,H,W)
-        y2_disp_field = torch.zeros(D,H,W)
-        z2_disp_field = torch.zeros(D,H,W)
-
-        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
-        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
-        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
-
-        #########################################################
-        # Get cpp output
-        print("\nRunning deeds 'consistentMappingCL': ")
-        cpp_consistentMappingCL = CPP_APPLY_BCV_MODULE.applyBCV_consistentMappingCL(
-            x_disp_field,
-            y_disp_field,
-            z_disp_field,
-            torch.tensor([FACTOR], dtype=torch.int))
-
-        #########################################################
-        # Get torch output
-        print("\nRunning torch 'std_det_jacobians': ")
-        torch_consistentMappingCL = consistentMappingCL(
-            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
-        )
-
-        #########################################################
-        # Assert difference
-        assert test_equal_tensors(torch_consistentMappingCL, cpp_consistentMappingCL)
 
     def test_interp3(self):
 
@@ -284,54 +234,50 @@ class TestTransformations(unittest.TestCase):
 
         #########################################################
         # Prepare inputs
-        FACTOR = 1
-        D, H, W =  6, 6, 2
-
-        DELTA_W = +6.
-        DELTA_H = +2.
-        DELTA_D = +.5
-
-        DELTA_W2 = +7.
-        DELTA_H2 = +3.
-        DELTA_D2 = +.6
+        FACTOR = 2**10
+        D, H, W =  4, 3, 3
 
         ## Generate some artificial displacements for x,y,z
-        x_disp_field = torch.zeros(D,H,W)
-        y_disp_field = torch.zeros(D,H,W)
-        z_disp_field = torch.zeros(D,H,W)
+        u_disp = torch.zeros(D,H,W)
+        u_disp[1,1,1] = 1
+        u_disp[2,1,1] = -1
+        v_disp = torch.zeros(D,H,W)
+        w_disp = torch.zeros(D,H,W)
 
         ##Generate 2nd flow field
-        x2_disp_field = torch.zeros(D,H,W)
-        y2_disp_field = torch.zeros(D,H,W)
-        z2_disp_field = torch.zeros(D,H,W)
-
-        x_disp_field[0,0,0] = -2.0*(DELTA_W/W) # u displacement
-        x_disp_field[0,0,1] = 2.0*(DELTA_W/W) # u displacement
-        x2_disp_field[0,0,0] = -2.0*(DELTA_W2/W) # u displacement
-        x2_disp_field[0,0,1] = 2.0*(DELTA_W2/W) # u displacement
+        inverse_u_disp = torch.zeros(D,H,W)
+        inverse_u_disp[1,1,1] = -1
+        inverse_u_disp[2,1,1] = 1
+        inverse_v_disp = torch.zeros(D,H,W)
+        inverse_w_disp = torch.zeros(D,H,W)
 
         #########################################################
         # Get cpp output
         print("\nRunning deeds 'consistentMappingCL': ")
-        deeds_u, deeds_v, deeds_w, deeds_u2, deeds_v2, deeds_w2 = CPP_APPLY_BCV_MODULE.transformations_consistentMappingCL(
-            x_disp_field,
-            y_disp_field,
-            z_disp_field,
-            x2_disp_field,
-            y2_disp_field,
-            z2_disp_field,
+        cpp_u, cpp_v, cpp_w, cpp_u2, cpp_v2, cpp_w2 = CPP_APPLY_BCV_MODULE.transformations_consistentMappingCL(
+            u_disp,
+            v_disp,
+            w_disp,
+            inverse_u_disp,
+            inverse_v_disp,
+            inverse_w_disp,
             torch.tensor([FACTOR], dtype=torch.int))
 
         #########################################################
         # Get torch output
         print("\nRunning torch 'consistent mapping': ")
-        torch_u, torch_v, torch_w, torch_u2, torch_v2, torch_w2 = consistentMappingCL(
-            x_disp_field, y_disp_field, z_disp_field,x2_disp_field,y2_disp_field,z2_disp_field, FACTOR
+        torch_disp_field, torch_inverse_disp_field = calc_inverse_consistent_diffeomorphic_field(
+            torch.stack([u_disp, v_disp, w_disp], dim=0).unsqueeze(0),
+            torch.stack([inverse_u_disp, inverse_v_disp, inverse_w_disp], dim=0).unsqueeze(0),
+            # FACTOR,
+            np.log2(FACTOR),
+            iter_steps_override=10
         )
-
+        torch_u, torch_v, torch_w = torch_disp_field.squeeze().tensor_split(3,0)
+        torch_inverse_u, torch_inverse_v, torch_inverse_w = torch_inverse_disp_field.squeeze().tensor_split(3,0)
         #########################################################
         # Assert difference
-        assert torch.allclose(torch_u, deeds_u,
+        assert torch.allclose(torch_u, cpp_u,
             rtol=1e-05, atol=1e-08, equal_nan=False
         ), "Tensors do not match"
 
@@ -392,5 +338,5 @@ if __name__ == '__main__':
     # tests.test_interp3_flag_set()
     # tests.test_interp3_complex_tensors()
     # tests.test_volfilter()
-    # tests.test_consistentMappingCL()
-    tests.test_upsampleDeformationsCL()
+    tests.test_consistentMappingCL()
+    # tests.test_upsampleDeformationsCL()

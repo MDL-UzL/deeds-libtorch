@@ -225,7 +225,41 @@ def interp3(input, output_shape, x1, y1, z1, flag, USE_TORCH_FUNCTION=False, USE
 
     return interp
 
+def calc_inverse_consistent_diffeomorphic_field(disp_field, inverse_disp_field, time_steps=1, ensure_inverse_consistency=True, iter_steps_override=None):
+    # https://github.com/multimodallearning/convexAdam/blob/76a595914eb21ea17795e6cd19503ab447f0ea6b/l2r_2021_convexAdam_task1_docker.py#L166
+    # https://github.com/cwmok/LapIRN/blob/d8f96770a704b1f190955cc26297c7b01a270b0a/Code/miccai2020_model_stage.py#L761
 
+    # Vincent ArsignyOlivier CommowickXavier PennecNicholas Ayache: A Log-Euclidean Framework for Statistics on Diffeomorphisms
+    B,C,D,H,W = disp_field.size()
+    dt = 1
+
+    with torch.no_grad():
+        identity = F.affine_grid(torch.eye(3,4).unsqueeze(0),(1,1,D,H,W), align_corners=True).permute(0,4,1,2,3).to(disp_field)
+        if ensure_inverse_consistency:
+            out_disp_field = (disp_field/(2**time_steps)*dt).clone()
+            out_inverse_disp_field = (inverse_disp_field/(2**time_steps)*dt).clone()
+
+            for _ in range(time_steps if not iter_steps_override else iter_steps_override):
+                ds = out_disp_field.clone()
+                inverse_ds = out_inverse_disp_field.clone()
+                out_disp_field = \
+                    +0.5 * ds \
+                    -0.5 * F.grid_sample(inverse_ds, (identity + ds).permute(0,2,3,4,1), padding_mode='border', align_corners=True)
+
+                out_inverse_disp_field = \
+                    +0.5 * inverse_ds \
+                    -0.5 * F.grid_sample(ds, (identity + inverse_ds).permute(0,2,3,4,1), padding_mode='border', align_corners=True)
+        else:
+            for _ in range(time_steps if not iter_steps_override else iter_steps_override):
+                ds_dt = disp_field/(2**time_steps)
+                ds = ds_dt*dt
+                for _ in range(time_steps):
+                    inverse_ds = inverse_disp_field + ds.permute(0,2,3,4,1)
+                    ds = ds + F.grid_sample(ds, inverse_ds, mode='bilinear', padding_mode="border", align_corners=True)
+            out_disp_field = ds
+            out_inverse_disp_field = None
+
+    return out_disp_field, out_inverse_disp_field
 
 def consistentMappingCL(u1,v1,w1,u2,v2,w2,factor, USE_CONSISTENT_TORCH=False):
     #u1,v1,w1- deformation field1
