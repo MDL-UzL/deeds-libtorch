@@ -44,6 +44,13 @@ def filter1D(img, weight, dim, padding_mode='replicate'):
 
     return F.conv3d(F.pad(img.view(B*C, 1, D, H, W), padding, mode=padding_mode), weight.view(view)).view(B, C, D, H, W)
 
+def mind_ssc_deeds(img, delta=1, sigma=0.8):
+    six_neighbourhood = torch.tensor([[0, 1, 1],
+                                      [0, 1, 0],
+                                      [delta, 0, 1],
+                                      [delta, 1, 2],
+                                      [delta, 1, 1],
+                                      [delta, 2, 1]])
 def mind_ssc(img, delta=1, sigma=0.8):
     # see http://mpheinrich.de/pub/miccai2013_943_mheinrich.pdf for details on the MIND-SSC descriptor
     img = img.unsqueeze(0).unsqueeze(0)
@@ -62,25 +69,33 @@ def mind_ssc(img, delta=1, sigma=0.8):
 
     # define comparison mask
     x, y = torch.meshgrid(torch.arange(6, device=device), torch.arange(6, device=device))
-    mask = ((x > y).view(-1) & (dist == 2).view(-1))
+    mask = ((x > y).view(-1) & (dist == 2).view(-1)) # twelve neighbourhood (connection matrix of 6 nodes)
 
     # build kernel
     idx_shift1 = six_neighbourhood.unsqueeze(1).repeat(1,6,1).view(-1,3)[mask, :].long()
     idx_shift2 = six_neighbourhood.unsqueeze(0).repeat(6,1,1).view(-1,3)[mask, :].long()
     mshift1 = torch.zeros((12, 1, 3, 3, 3), device=device)
     mshift1.view(-1)[torch.arange(12, device=device) * 27 + idx_shift1[:,0] * 9 + idx_shift1[:, 1] * 3 + idx_shift1[:, 2]] = 1
+    # mshift1/2 each contain 12 patch coordinates (for the difference 24 patches are needed I(12) - I(12) resulting in 12 edge differences)
+    # (mshift2+mshift1).permute(1,2,3,4,0) will yield ssc features: per column 2 patches are invoked to calculate a feature
     mshift2 = torch.zeros((12, 1, 3, 3, 3), device=device)
     mshift2.view(-1)[torch.arange(12, device=device) * 27 + idx_shift2[:,0] * 9 + idx_shift2[:, 1] * 3 + idx_shift2[:, 2]] = 1
     rpad = nn.ReplicationPad3d(delta)
-
+    padded_img = rpad(img)
+    padded_img[0,0,0,2,2] = 0
+    padded_img[0,0,-1,2,2] = 0
     # compute patch-ssd
-    ssd = smooth(((F.conv3d(rpad(img), mshift1, dilation=delta) - F.conv3d(rpad(img), mshift2, dilation=delta)) ** 2), sigma)
-
+    mind_features_patches_a = F.conv3d(rpad(img), mshift1, dilation=delta)
+    # convolute kernel with padded version of image (3)^n = 3^3 = 27 steps (for every voxel calculate patch distance from this voxels patch to adjacent patches)
+    mind_features_patches_b = F.conv3d(rpad(img), mshift2, dilation=delta)
+    unsmoothed_mind = ((mind_features_patches_a - mind_features_patches_b) ** 2) # same as w1 in deeds code but for 12-neighbourhood
+    # ssd = smooth(unsmoothed_mind, sigma)
+    ssd = unsmoothed_mind
     # MIND equation
     mind = ssd - torch.min(ssd, 1, keepdim=True)[0]
-    mind_var = torch.max(torch.mean(mind, 1, keepdim=True), 1e-6*torch.ones_like(mind))
-    mind_var = torch.clamp(mind_var, mind_var.mean() * 0.001, mind_var.mean() * 1000)
-    mind /= mind_var
+    # mind_var = torch.max(torch.mean(mind, 1, keepdim=True), 1e-6*torch.ones_like(mind))
+    # mind_var = torch.clamp(mind_var, mind_var.mean() * 0.001, mind_var.mean() * 1000)
+    # mind /= mind_var
     # mind = torch.exp(-mind)
 
     #permute to have same ordering as C++ code

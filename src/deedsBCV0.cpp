@@ -285,7 +285,7 @@ int main (int argc, char * const argv[]) {
         gettimeofday(&time1, NULL);
 		upsampleDeformationsCL(u0,v0,w0,u1i,v1i,w1i,m1,n1,o1,m2,n2,o2);
         upsampleDeformationsCL(ux,vx,wx,u0,v0,w0,m,n,o,m1,n1,o1);
-		warpImageCL(warped1,im1b,warped0,ux,vx,wx); //TODO
+		warpImageCL(warped1,im1b,warped0,ux,vx,wx); //DONE
 		u1i=new float[sz1]; v1i=new float[sz1]; w1i=new float[sz1];
         gettimeofday(&time2, NULL);
 		timeTrans+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
@@ -311,7 +311,7 @@ int main (int argc, char * const argv[]) {
         cout<<"\nTime: MIND="<<timeMIND<<", data="<<timeData<<", MST-reg="<<timeSmooth<<", transf.="<<timeTrans<<"\n speed="<<2.0*(float)sz1*(float)len3/(timeData+timeSmooth)<<" dof/s\n";
 
         gettimeofday(&time1, NULL);
-        consistentMappingCL(u1,v1,w1,u1i,v1i,w1i,m1,n1,o1,step1); // TODO
+        consistentMappingCL(u1,v1,w1,u1i,v1i,w1i,m1,n1,o1,step1); // DONE
         gettimeofday(&time2, NULL);
         float timeMapping=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
 

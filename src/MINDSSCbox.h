@@ -79,6 +79,7 @@ void boxfilter(float* input,float* temp1,float* temp2,
 
 
 void imshift(float* input,float* output,int dx,int dy,int dz,int m,int n,int o){
+    // Get values of shifted patch. If coordinate is not within image dimensions return same intensity as original image (will result in zero distance)
     //shift image with preservation of original image values when shifted area is out of bounds
     for(int k=0;k<o;k++){ //z
         for(int j=0;j<n;j++){ //x
@@ -113,16 +114,24 @@ void distances(float* im1,float* d1,int m,int n,int o,int qs,int l){
 
     float* temp1=new float[sz1]; //img size temp
     float* temp2=new float[sz1]; //img size temp
-    int dx[6]={+qs,+qs,-qs,+0, +qs,+0}; //redifinition
-	int dy[6]={+qs,-qs,+0, -qs,+0, +qs}; //redefinition
-	int dz[6]={0,  +0, +qs,+qs,+qs,+qs}; //redefiniton
+    // int dx[6]={+qs, +qs, -qs, 0,   +qs, +0 }; //redifinition
+	// int dy[6]={+qs, -qs, 0,   -qs, 0,   +qs}; //redefinition
+	// int dz[6]={0,   0,   +qs, +qs, +qs, +qs}; //redefiniton
+    int dx[6]={+qs, +qs, +qs, +qs, 0,   0}; //redifinition
+	int dy[6]={+qs, -qs, 0,   0,   +qs, +qs}; //redefinition
+	int dz[6]={0,   0,   +qs, -qs, +qs, -qs}; //redefiniton
     //dx, dy, dz could be passed directly to this function from upper call to omit redefinitions
-	imshift(im1,w1,dx[l],dy[l],dz[l],m,n,o);
+	// Offset patches in every 6-neighbourhood direction by quanstisation step (radius)
+    imshift(im1,w1,dx[l],dy[l],dz[l],m,n,o);
     for(int i=0;i<sz1;i++){
         w1[i]=(w1[i]-im1[i])*(w1[i]-im1[i]); //(0-im[i])^2 = squared img dist from intensity val
     }
+    std::cout<<"\nsquared_patch_distance=";
+    for(int pri=0;pri<m*n*o ;pri++){
+        std::cout<<w1[pri]<<" ";
+    }
     //3 dim box filter = sth. like blur
-    boxfilter(w1,temp1,temp2,qs,m,n,o);
+    // boxfilter(w1,temp1,temp2,qs,m,n,o); //w1 is input and output
     for(int i=0;i<sz1;i++){
         d1[i+l*sz1]=w1[i];
     }
@@ -133,20 +142,23 @@ void distances(float* im1,float* d1,int m,int n,int o,int qs,int l){
 //__builtin_popcountll(left[i]^right[i]); absolute hamming distances
 void descriptor(uint64_t* mindq,float* im1,
     int m,int n,int o, //image dims
-    int qs, float* output_mind_twelve=0){ //mind_step (chain values smaller than quantisation chain)
+    int qs, float* output_mind_twelve=0, float* output_mind_bare=0){ //mind_step (chain values smaller than quantisation chain)
 	timeval time1,time2;
-
     //MIND with self-similarity context
 
-    //unused. is that 6-neighbourhood?
-	int dx[6]={+qs,+qs,-qs,+0, +qs,+0};
-	int dy[6]={+qs,-qs,+0, -qs,+0, +qs};
-	int dz[6]={+0, +0, +qs,+qs,+qs,+qs};
     //3^3 shift combinations (+qs,0,-qs) (x-dir, y-dir, z-dir) but only adjacent placed to origin (no diagonals) = 6 combinations
 
-	int sx[12]={-qs,+0, -qs,+0, +0, +qs,+0, +0, +0, -qs,+0, +0}; //is that MIND-SSC?
-	int sy[12]={+0, -qs,+0, +qs,+0, +0, +0, +qs,+0, +0, +0, -qs};
-	int sz[12]={+0, +0, +0, +0, -qs,+0, -qs,+0, -qs,+0, -qs,+0};
+	// int sx[12]={-qs,+0, -qs,+0, +0, +qs,+0, +0, +0, -qs,+0, +0}; //is that MIND-SSC?
+	// int sy[12]={+0, -qs,+0, +qs,+0, +0, +0, +qs,+0, +0, +0, -qs};
+	// int sz[12]={+0, +0, +0, +0, -qs,+0, -qs,+0, -qs,+0, -qs,+0};
+
+	// int sy[12]={ +0, -qs, -qs, +0,  +0,  +qs, +0,  +0,  +0,  -qs, +0,  +0}; //is that MIND-SSC?
+	// int sx[12]={-qs, +0,  +0,  +qs, +0,  +0,  +0,  +qs, +0,  +0,  +0,  -qs};
+	// int sz[12]={+0,  +0,  +0,  +0,  -qs, +0,  -qs, +0,  -qs, +0,  -qs, +0};
+
+    int sy[12]={0,   -qs, -qs, 0,  -qs, 0,   -qs, 0,   0,   0,   0,   0 }; //is that MIND-SSC?
+	int sx[12]={-qs, 0,   0,   qs, 0,   0,   0,   0,   -qs, 0,   -qs, 0 };
+	int sz[12]={0,   0,   0,   0,  0,   -qs, 0,   +qs, 0,   -qs, 0,   qs};
 
 	int index[12]={0,0,1,1,2,2,3,3,4,4,5,5};
 
@@ -164,13 +176,17 @@ void descriptor(uint64_t* mindq,float* im1,
 
 
     //============== DISTANCES USING BOXFILTER ===================
-	float* d1=new float[sz1*len1]; //img_size * (dx,dy,dz)
+	float* d1=new float[sz1*len1]; //img_size * (dx,dy,dz) (6 neighbourhood)
     gettimeofday(&time1, NULL);
 
 #pragma omp parallel for
     for(int l=0;l<len1;l++){ //for all dx, dy, dz
         //l iterator controls the shift package (dx,dy,dz)
         distances(im1,d1,m,n,o,qs,l); //d1 is returned (stored distances per x,y,z,l dimension, 4-dim)
+    }
+    std::cout<<"\ndistances=";
+    for(int pri=0;pri<m*n*o*6 ;pri++){
+        std::cout<<d1[pri]<<" ";
     }
 
     gettimeofday(&time2, NULL);
@@ -199,23 +215,29 @@ void descriptor(uint64_t* mindq,float* im1,
 
         for(int j=0;j<n;j++){//iterate x
             for(int i=0;i<m;i++){ //iterate y
+                std::cout<<"\nmind1_bare: ";
                 for(int l=0;l<len2;l++){ // iterate (sx,sy,sz) / index[l] package to get 12 mind values
-                    if(i+sy[l]>=0 && i+sy[l]<m
-                       && j+sx[l]>=0 && j+sx[l]<n
-                       && k+sz[l]>=0 && k+sz[l]<o){ //min(max) construct
-                        mind1[l]=d1[i+sy[l]+(j+sx[l])*m+(k+sz[l])*m*n+index[l]*sz1]; //mind1 is 1-dim, size=12
-                        //read offseted distance value
-                    }
-                    else{
-                        mind1[l]=d1[i+j*m+k*m*n+index[l]*sz1]; //(sz1=m*n*o)
-                        //read without (sx,sy,sz) ofset but with l=12 layer offset
-                    }
+                    int eff_sx = min(max(0, i+sx[l]),m-1);
+                    int eff_sy = min(max(0, j+sy[l]),n-1);
+                    int eff_sz = min(max(0, k+sz[l]),o-1);
+                    // consecutive l's will take same d1 offset (0...6) but different spatial coordinate
+                    mind1[l]=d1[eff_sx + eff_sy*m + eff_sz*m*n+index[l]*sz1]; //mind1 is 1-dim, size=12
+                    // -> take same node but calc 2 diffs per node and add? 2*6diffs = 12
+                    // if(i+sx[l]>=0 && i+sx[l]<m && j+sy[l]>=0 && j+sy[l]<n && k+sz[l]>=0 && k+sz[l]<o){ //min(max) construct
+                    //     mind1[l]=d1[i+sx[l]+(j+sy[l])*m+(k+sz[l])*m*n+index[l]*sz1]; //mind1 is 1-dim, size=12
+                    //     //read offseted distance value
+                    // }
+                    // else{
+                    //     mind1[l]=d1[i+j*m+k*m*n+index[l]*sz1]; //(sz1=m*n*o) builds 12-neighbourhood
+                    //     //read without (sx,sy,sz) ofset but with l=12 layer offset
+                    // }
                 }
-
                 float minval=*min_element(mind1,mind1+len2); //get minimum value of all 12 stored mind1 features
                 float sumnoise=0.0f;
                 for(int l=0;l<len2;l++){
                     mind1[l]-=minval; //reset minimum value of mind1 to 0 and lower others accordingly
+                    std::cout<<mind1[l]<<" ";
+                    output_mind_bare[i+j*m+k*m*n+l*sz1] = mind1[l];
                     sumnoise+=mind1[l]; //accumulate
                 }
                 float noise1=max(sumnoise/(float)len2,1e-6f); //rescale accumulated mind features
@@ -236,16 +258,9 @@ void descriptor(uint64_t* mindq,float* im1,
                     tabled1*=power;
                 }
                 mindq[i+j*m+k*m*n]=accum; //one mind value for every coordinate xyz
-                for(int m_idx=0;m_idx<12;m_idx++){
-                    output_mind_twelve[m_idx+i*12+j*m*12+k*m*n*12] = mind1[m_idx];
-                }
-                std::cout<<"\nmind1=";
-                for(int pri=0;pri<12 ;pri++){
-                    std::cout<<mind1[pri]<<" ";
-                }
             }
-        }
 
+        }
     }
     // std::cout<<"\nmindq=";
     // for(int pri=0;pri<m*n*o ;pri++){
@@ -263,7 +278,7 @@ void descriptor(uint64_t* mindq,float* im1,
 
 }
 
-std::tuple<torch::Tensor, torch::Tensor> mind_ssc_descriptor(
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> mind_ssc_descriptor(
     torch::Tensor image,
     torch::Tensor pQuantisation_step) {
 
@@ -278,17 +293,20 @@ std::tuple<torch::Tensor, torch::Tensor> mind_ssc_descriptor(
 
     uint64_t* output = new uint64_t[m*n*o];
     float* output_mind_twelve = new float[m*n*o*12];
+    float* output_mind_bare = new float[m*n*o*12];
 
-    descriptor(output, input_image, m, n, o, *quantisation_step, output_mind_twelve);
+    descriptor(output, input_image, m, n, o, *quantisation_step, output_mind_twelve, output_mind_bare);
     std::vector<uint64_t> output_vect{output, output+m*n*o};
+    std::vector<float> output_mind_bare_vect{output_mind_bare, output_mind_bare+m*n*o*12};
     std::vector<float> output_mind_twelve_vect{output_mind_twelve, output_mind_twelve+m*n*o*12};
 
     auto options = torch::TensorOptions().dtype(torch::kInt64);
     auto float_options = torch::TensorOptions().dtype(torch::kFloat);
     return std::tuple<
             torch::Tensor,
-            torch::Tensor>(
+            torch::Tensor, torch::Tensor>(
         torch::from_blob(output_vect.data(), {m,n,o}, options).clone(),
-        torch::from_blob(output_mind_twelve_vect.data(), {m,n,o,12}, float_options).clone()
+        torch::from_blob(output_mind_twelve_vect.data(), {12,m,n,o}, float_options).clone(),
+        torch::from_blob(output_mind_bare_vect.data(), {12,m,n,o}, float_options).clone()
     );
 }

@@ -36,7 +36,7 @@ class TestMindSsc(unittest.TestCase):
         image[1,1,1] = 1
         #########################################################
         # Get cpp output
-        cpp_mind_ssc_long_long, cpp_mind_ssc_twelve = CPP_DEEDS_MODULE.mind_ssc_descriptor(
+        cpp_mind_ssc_long_long, cpp_mind_ssc_twelve, mind_bare = CPP_DEEDS_MODULE.mind_ssc_descriptor(
             image,
             torch.tensor([QUANTISATION_STEP], dtype=torch.int)
         )
