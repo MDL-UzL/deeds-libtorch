@@ -111,6 +111,7 @@ void dataCostCL(
     float* results,
     int m,int n,int o,int len2,int step1,int hw,float quant,float alpha,int randnum){
     cout<<"d"<<flush;
+    // Returns mind sums of patches (voxel size images are reduced to patches) given two mind-images
 
     int len=hw*2+1;
     len2=pow(hw*2+1,3); //len2 is calculated again (see linearBCV.cpp)
@@ -127,7 +128,7 @@ void dataCostCL(
     int quant2=quant;
 
     //const int hw2=hw*quant2; == pad1
-
+    // quant means dilation, hw means search window width == search steps
     int pad1=quant2*hw; //pad stop = quant * search_radius
     int pad2=pad1*2; // uniform padding =  2*  quant * search_radius
 
@@ -143,16 +144,16 @@ void dataCostCL(
             for(int i=0;i<mp;i++){
                 data2p[i+j*mp+k*mp*np]=data2[max(min(i-pad1,m-1),0) // 0 to x_max_idx but with x offset (shift of half padding to center data)
                                       +max(min(j-pad1,n-1),0)*m
-                                      +max(min(k-pad1,o-1),0)*m*n];
+                                      +max(min(k-pad1,o-1),0)*m*n]; //replication padding
             }
         }
     }
 
 
-    int skipz=1; int skipx=1; int skipy=1;
+    int skipz=1; int skipx=1; int skipy=1; //define kernel steps to be skipped
     if(step1>4){
         if(randnum>0){
-            //true for linearBCV
+            //true for linearBCV and deedsBCV
             skipz=2; skipx=2;
         }
         if(randnum>1){
@@ -177,17 +178,18 @@ void dataCostCL(
 
     float alphai=(float)step1/(alpha*(float)quant); //linearBCV alpha=1
 
-    float alpha1=0.5*alphai/(float)(maxsamp); //alpha1 = step/(alpha*quant)
+    float alpha1=0.5*alphai/(float)(maxsamp); //alpha1 = step/(alpha*quant) // this scales the mind datacost against the quadratic offset distance regularisation
 
     //unsigned long buffer[1000];
 
 #pragma omp parallel for
+    // iterate over patches
     for(int z=0;z<o1;z++){ // iterate gridded z
         for(int x=0;x<n1;x++){ // iterate gridded y
             for(int y=0;y<m1;y++){ //iterate gridded x
                 int z1=z*step1;
                 int x1=x*step1;
-                int y1=y*step1; //some kind of scaling
+                int y1=y*step1; //for every patch coordinate x,y,z get corner starting voxel coordinate of the patch, position of patch1
                 /*for(int k=0;k<step1;k++){
                     for(int j=0;j<step1;j++){
                         for(int i=0;i<step1;i++){
@@ -201,30 +203,35 @@ void dataCostCL(
                     int zs=l/(len*len);
                     int xs=(l-zs*len*len)/len;
                     int ys=l-zs*len*len-xs*len;
-                    //get position in search kernel (ys increases faster than xs than zs)
+                    //get position of search (ys increases faster than xs than zs)
                     // (xs,ys,zs) is center of search kernel
 
                     zs*=quant;
                     xs*=quant;
-                    ys*=quant; //this is some kind of scaling
+                    ys*=quant; // apply dilation to search coordinates
 
                     int x2=xs+x1;
                     int z2=zs+z1;
-                    int y2=ys+y1; // per (x1,z1,y1) we add relative search position (xs, zs, ys)
+                    int y2=ys+y1; // per (x1,z1,y1) we add relative search position (xs, zs, ys) // position of patch2
                     for(int k=0;k<step1;k+=skipz){ //iterate steps, skip one, skip two etc. i.e. sparse microsteps
                         for(int j=0;j<step1;j+=skipx){
                             for(int i=0;i<step1;i+=skipy){
+                                //iterate over every voxel of a patch
                                 //unsigned int t=buffer[i+j*STEP+k*STEP*STEP]^buf2p[i+j*mp+k*mp*np];
                                 //out1+=(wordbits[t&0xFFFF]+wordbits[t>>16]);
-                                unsigned long t1=data   [i+y1+  (j+x1)*m+   (k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
-                                unsigned long t2=data2p [i+      j*mp+      k*mp*np+    (y2 +x2*mp   +z2*mp*np)];//last term is search offset
+                                unsigned long t1=data   [i+y1 + (j+x1)*m+   (k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
+                                unsigned long t2=data2p [i+y2 + (j+x2)*mp+  (k+z2)*mp*np];//last term is search offset
                                 // t2=data2p            [i+y2   (j+x2)*mp+  (k+z2)*mp*np]; // y2,x2,z2 contain search offset
-                                out1+=__builtin_popcountll(t1^t2); //bitwise xor -> are mind features either both1 or both zero? count ones in bitstream
+                                out1+=__builtin_popcountll(t1^t2); //bitwise xor -> are mind features either both1 or both zero? count ones in bitstream // patch2 - patch1
+                                //count differences in mind features per voxel in a patch for every search position
+                                //patch_cube_size * search_cube_size dimension
+                                //out one is patch cost.
                             }
                         }
                     }
                     results[(y+x*m1+z*m1*n1)*len2+l]=out1*alpha1; // divide by samplecount of microsteps
-                    //for every x,y,z and every kernel_element (4-dim)
+                    // store scaled patch costs as difference of patches (center_patch - search patch around search position) -> What would be the cost if the center patch is moved to the search position?
+                    // alpha1 also scales this cost agains the quadratic offset model build up in regularisationCL. There the cost is just added to the datacost valued calculated here
                 }
             }
         }

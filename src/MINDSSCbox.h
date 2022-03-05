@@ -123,13 +123,35 @@ void distances(float* im1,float* d1,int m,int n,int o,int qs,int l){
     //dx, dy, dz could be passed directly to this function from upper call to omit redefinitions
 	// Offset patches in every 6-neighbourhood direction by quanstisation step (radius)
     imshift(im1,w1,dx[l],dy[l],dz[l],m,n,o);
+    // std::cout<<"\nw1=";
+    // for(int pri=0;pri<m*n*o ;pri++){
+    //     std::cout<<w1[pri]<<" ";
+    // }
+    // std::cout<<"\nw2=";
+    // for(int pri=0;pri<sz_pad ;pri++){
+    //     std::cout<<w2[pri]<<" ";
+    // }
+
     for(int i=0;i<sz1;i++){
         w1[i]=(w1[i]-im1[i])*(w1[i]-im1[i]); //(0-im[i])^2 = squared img dist from intensity val
     }
-    std::cout<<"\nsquared_patch_distance=";
-    for(int pri=0;pri<m*n*o ;pri++){
-        std::cout<<w1[pri]<<" ";
-    }
+
+    // for(int k=0;k<o;k++){
+    //     for(int j=0;j<m;j++){
+    //         for(int i=0;i<n;i++){
+    //             int w2_coord = i-dx[l] + (j-dy[l])*n + (k-dz[l])*m*n;
+    //             int im_coord = i + j*n + k*m*n;
+    //             w2[w2_coord] = (w2[w2_coord] - im1[im_coord]) * (w2[w2_coord] - im1[im_coord]); //(0-im[i])^2 = squared img dist from intensity val
+    //         }
+    //     }
+    // }
+    // std::cout<<"\nsquared_patch_distance=";
+    // for(int pri=0;pri<m*n*o ;pri++){
+    //     std::cout<<w1[pri]<<" ";
+    // }
+    // for(int pri=0;pri<sz_pad ;pri++){
+    //     std::cout<<w2[pri]<<" ";
+    // }
     //3 dim box filter = sth. like blur
     // boxfilter(w1,temp1,temp2,qs,m,n,o); //w1 is input and output
     for(int i=0;i<sz1;i++){
