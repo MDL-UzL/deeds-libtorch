@@ -245,3 +245,40 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
 	delete[] vertices;
 	delete[] level;
 }
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> prims_mst_prims_graph(torch::Tensor pMind_img, torch::Tensor pGrid_divisor) {
+
+	// Prepare input variables
+    torch::Tensor mind_img_copy = pMind_img.clone();
+
+	int m = mind_img_copy.size(0);
+    int n = mind_img_copy.size(1);
+    int o = mind_img_copy.size(2);
+
+    float* mind_img = mind_img_copy.data_ptr<float>();
+	int* grid_divisor = pGrid_divisor.data_ptr<int>();
+
+	// Prepare output variables
+    int* ordered = new int[m*n*o];
+	int* parents = new int[m*n*o];
+	float* edgemst = new float[m*n*o];
+
+    primsGraph(mind_img, ordered, parents, edgemst, *grid_divisor, m, n, o);
+
+	// Prepare lib output
+	std::vector<int> ordered_vect{ordered, ordered+m*n*o};
+	std::vector<int> parents_vect{parents, parents+m*n*o};
+	std::vector<float> edgemst_vect{edgemst, edgemst+m*n*o};
+
+	auto int_options = torch::TensorOptions().dtype(torch::kInt);
+    auto float_options = torch::TensorOptions().dtype(torch::kFloat);
+
+	return std::tuple<
+            torch::Tensor,
+            torch::Tensor,
+            torch::Tensor>(
+        torch::from_blob(ordered_vect.data(), {m*n*o}, int_options).clone(),
+        torch::from_blob(parents_vect.data(), {m*n*o}, int_options).clone(),
+        torch::from_blob(edgemst_vect.data(), {m*n*o}, float_options).clone()
+    );
+}
