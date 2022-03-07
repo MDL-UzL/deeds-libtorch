@@ -114,7 +114,7 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
         meanim+=im1[i];
     }
     meanim/=(float)(m2*n2*o2); // image mean intensity
-
+	
 	//normalize edgecosts
     float stdim=0.0;
     for(int i=0;i<m2*n2*o2;i++){
@@ -122,12 +122,12 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
     }
     stdim=sqrt(stdim/(float)(m2*n2*o2));
 
-    for(int i=0;i<sz*6;i++){
+	for(int i=0;i<sz*6;i++){
         edgecost[i]/=(float)pow(step1,3); // divide edge cost by voxel count of a patch
-    }
+	}
     for(int i=0;i<sz*6;i++){
         edgecost[i]=-edgecost2weight(edgecost[i],2.0f*stdim); // edgecost = edgecost - exp(-edgecost/2*stdim)
-    }
+	}
 
 	float centrex=n/2;
 	float centrey=m/2;
@@ -232,7 +232,7 @@ void primsGraph(float* im1,int* ordered,int* parents,float* edgemst,int step1,in
 
             if(index==oparent){
                 edgemst[ochild]=-edgecost[ochild+nb*sz];
-				// message: substract edgecost of all connected parents.
+				// message: substract edgecost of all connected children.
             }
         }
     }
@@ -272,13 +272,15 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> prims_mst_prims_graph(to
 
 	auto int_options = torch::TensorOptions().dtype(torch::kInt);
     auto float_options = torch::TensorOptions().dtype(torch::kFloat);
-
+	int m_grid = (m/(*grid_divisor));
+	int n_grid = (n/(*grid_divisor));
+	int o_grid = (o/(*grid_divisor));
 	return std::tuple<
             torch::Tensor,
             torch::Tensor,
             torch::Tensor>(
-        torch::from_blob(ordered_vect.data(), {m*n*o}, int_options).clone(),
-        torch::from_blob(parents_vect.data(), {m*n*o}, int_options).clone(),
-        torch::from_blob(edgemst_vect.data(), {m*n*o}, float_options).clone()
+        torch::from_blob(ordered_vect.data(), {m_grid*n_grid*o_grid}, int_options).clone(),
+        torch::from_blob(parents_vect.data(), {m_grid*n_grid*o_grid}, int_options).clone(),
+        torch::from_blob(edgemst_vect.data(), {m_grid*n_grid*o_grid}, float_options).clone()
     );
 }

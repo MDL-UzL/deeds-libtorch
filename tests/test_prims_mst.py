@@ -16,7 +16,7 @@ class TestPrimsMst(unittest.TestCase):
         #########################################################
         # Prepare inputs
         GRID_DIVISOR = torch.tensor(1).int()
-        D,H,W = 3,3,3
+        D,H,W = 8,4,4
         mind_image = torch.arange(D*H*W).reshape(D,H,W).float()
         #########################################################
         # Get cpp output
@@ -24,14 +24,14 @@ class TestPrimsMst(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        patch_list = log_wrapper(calc_prims_graph, mind_image, GRID_DIVISOR)
-        patch_ids = [patch.id for patch in patch_list]
-        parent_ids = [patch.parent.id for patch in patch_list]
-        edge_mst = [patch.edgemst for patch in patch_list]
+        patch_list, edge_list = log_wrapper(calc_prims_graph, mind_image, GRID_DIVISOR)
+        patch_ids = [patch._id for patch in patch_list]
+        parent_ids = [patch.parent._id for patch in patch_list]
+        unary_children_costs = torch.tensor([patch.children_cost for patch in patch_list])
 
         #########################################################
         # Assert difference
-        assert test_equal_tensors(ordered, torch.tensor(patch_ids)), "Tensors do not match"
+        assert test_equal_tensors(edgemst.sum(), unary_children_costs.sum()), "Tensors do not match"
 
 
 if __name__ == '__main__':
