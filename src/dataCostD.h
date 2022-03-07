@@ -1,3 +1,4 @@
+
 void interp3xyz(float* datai,float* data,float* datax,float* datay,int len1,int len2){
     //x-interp
     for(int k=0;k<len1;k++){
@@ -437,4 +438,36 @@ torch::Tensor datacost_d_warpAffine(
 
     auto options = torch::TensorOptions().dtype(torch::kFloat);
     return torch::from_blob(warp_vect.data(), {m,n,o}, options).clone();
+}
+
+torch::Tensor datacost_d_datacostCL(torch::Tensor pMind_img_a, torch::Tensor pMind_img_b, torch::Tensor pGrid_divisor, torch::Tensor pHw, torch::Tensor pDilation, torch::Tensor pAlpha) {
+
+	// Prepare input variables
+    torch::Tensor mind_img_a_copy = pMind_img_a.clone();
+    torch::Tensor mind_img_b_copy = pMind_img_b.clone();
+
+	int m = mind_img_a_copy.size(0);
+    int n = mind_img_a_copy.size(1);
+    int o = mind_img_a_copy.size(2);
+
+    int64_t* mind_img_a = mind_img_a_copy.data_ptr<int64_t>();
+    int64_t* mind_img_b = mind_img_b_copy.data_ptr<int64_t>();
+    unsigned long* mind_img_a_ulong = (unsigned long*)((void*)&mind_img_a);
+	unsigned long* mind_img_b_ulong = (unsigned long*)((void*)&mind_img_b);
+    int grid_divisor = *(pGrid_divisor.data_ptr<int>());
+    int hw = *(pHw.data_ptr<int>());
+    int dilation = *(pDilation.data_ptr<int>());
+    float alpha = *(pAlpha.data_ptr<float>());
+
+	// Prepare output variables
+    int results_len = m*n*o*pow(hw*2+1,3);
+	float* results = new float[results_len];
+    //len2 is 0 since its unused in fuction and RANDNUM = 1 since this is fixed for all calls in deeds
+    dataCostCL(mind_img_a_ulong, mind_img_b_ulong, results, m, n, o, 0, grid_divisor, hw, dilation, alpha, 1);
+
+	// Prepare lib output
+	std::vector<float> results_vect{results, results+results_len};
+
+    auto float_options = torch::TensorOptions().dtype(torch::kFloat);
+	return torch::from_blob(results_vect.data(), {m,n,o,int(pow(hw*2+1,3))}, float_options).clone();
 }

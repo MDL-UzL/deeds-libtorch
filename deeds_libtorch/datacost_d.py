@@ -83,15 +83,10 @@ def warpAffine(image, affine_mat, w, v, u):
 
     return warped
 
+def calc_datacost(feature_volume_a, feature_volume_b,
+    patch_length, hw, dilation, alpha):
 
-def interp3xyz():
-    raise NotImplementedError()
-
-def interp3xyzB():
-    raise NotImplementedError()
-
-def dataCostCL():
-    raise NotImplementedError()
-
+    return None
+    
 def warpImageCL():
     raise NotImplementedError()

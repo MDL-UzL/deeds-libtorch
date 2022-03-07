@@ -232,7 +232,7 @@ int main (int argc, char * const argv[]) {
 
         if(level==0|prev!=curr){
             gettimeofday(&time1, NULL);
-            descriptor(im1_mind,warped0,m,n,o,mind_step[level]);//im1 affine TODO
+            descriptor(im1_mind,warped0,m,n,o,mind_step[level]);//im1 affine DONE
             descriptor(im1b_mind,im1b,m,n,o,mind_step[level]);
             gettimeofday(&time2, NULL);
             timeMIND+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
@@ -244,7 +244,7 @@ int main (int argc, char * const argv[]) {
 		int len3=pow(hw1*2+1,3);
 		m1=m/step1; n1=n/step1; o1=o/step1; sz1=m1*n1*o1;
 
-        float* costall=new float[sz1*len3];
+        float* costall=new float[sz1*len3]; // patch costs for patches around a grid node (patch_count*(2*hw+1) == patch_count*search positions)
         float* u0=new float[sz1]; float* v0=new float[sz1]; float* w0=new float[sz1];
 		int* ordered=new int[sz1]; int* parents=new int[sz1]; float* edgemst=new float[sz1];
 
@@ -269,13 +269,15 @@ int main (int argc, char * const argv[]) {
 		timeMIND+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
         cout<<"M"<<flush;
         gettimeofday(&time1, NULL);
+        //dataCost uses MIND features
         dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,args.alpha,RAND_SAMPLES); //TODO
         gettimeofday(&time2, NULL);
 
 		timeData+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
         cout<<"D"<<flush;
         gettimeofday(&time1, NULL);
-        primsGraph(im1b,ordered,parents,edgemst,step1,m,n,o); //TODO
+        //prims graph uses image
+        primsGraph(im1b,ordered,parents,edgemst,step1,m,n,o); //DONE
         regularisationCL(costall,u0,v0,w0,u1,v1,w1,hw1,step1,quant1,ordered,parents,edgemst); //TODO
         gettimeofday(&time2, NULL);
 		timeSmooth+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
@@ -392,10 +394,14 @@ int main (int argc, char * const argv[]) {
 #ifdef TORCH_EXTENSION_NAME
     PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         m.def("mind_ssc_descriptor", &mind_ssc_descriptor, "mind_ssc_descriptor");
+        m.def("prims_mst_prims_graph", &prims_mst_prims_graph, "prims_mst_prims_graph");
+        m.def("datacost_d_datacost_cl", &datacost_d_datacostCL, "datacost_d_datacost_cl");
     }
 
 #else
     TORCH_LIBRARY(cpp_deeds, m) {
         m.def("mind_ssc_descriptor", &mind_ssc_descriptor);
+        m.def("prims_mst_prims_graph", &prims_mst_prims_graph);
+        m.def("datacost_d_datacost_cl", &datacost_d_datacostCL);
     }
 #endif

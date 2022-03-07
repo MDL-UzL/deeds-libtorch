@@ -4,8 +4,8 @@ from pathlib import Path
 import torch
 import timeit
 
-from __init__ import CPP_APPLY_BCV_MODULE, test_equal_tensors, log_wrapper
-from deeds_libtorch.datacost_d import warpAffineS, warpAffine
+from __init__ import CPP_APPLY_BCV_MODULE, CPP_DEEDS_MODULE, test_equal_tensors, log_wrapper
+from deeds_libtorch.datacost_d import warpAffineS, warpAffine, calc_datacost
 
 
 
@@ -82,14 +82,24 @@ class TestDatacostD(unittest.TestCase):
         # Assert difference
         assert test_equal_tensors(cpp_warped, torch_warped), "Tensors do not match"
 
-    def test_interp3xyz(self):
-        assert False
-
-    def test_interp3xyzB(self):
-        assert False
-
     def test_dataCostCL(self):
-        assert False
+        ALPHA = torch.tensor(1.0)
+
+        DILATION = torch.tensor(1).int()
+        HW = torch.tensor(1).int()
+        GRID_DIVISOR = torch.tensor(1).int()
+        D,H,W = 4,4,4
+        mind_image_a = 1*torch.arange(D*H*W).reshape(D,H,W).float()
+        mind_image_b = 2*torch.arange(D*H*W).reshape(D,H,W).float()
+
+        #########################################################
+        # Get cpp output
+        cpp_costs = log_wrapper(CPP_DEEDS_MODULE.datacost_d_datacost_cl, mind_image_a.long(), mind_image_b.long(), GRID_DIVISOR, HW, DILATION, ALPHA)
+
+        #########################################################
+        # Get torch output
+        torch_costs = log_wrapper(calc_datacost, mind_image_a, mind_image_b, GRID_DIVISOR, HW, DILATION, ALPHA)
+        assert test_equal_tensors(cpp_costs, torch_costs), "Tensors do not match"
 
     def test_warpImageCL(self):
         assert False
@@ -100,4 +110,5 @@ if __name__ == '__main__':
     # unittest.main()
     tests = TestDatacostD()
     # tests.test_warpAffineS()
-    tests.test_warpAffine()
+    # tests.test_warpAffine()
+    tests.test_dataCostCL()
