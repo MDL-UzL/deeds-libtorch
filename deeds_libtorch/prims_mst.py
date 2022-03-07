@@ -60,7 +60,7 @@ def build_neighbourhood_adjacency(pd, pw, ph):
             for w_idx in range(pw):
                 c_list = [d_idx, h_idx, w_idx]
                 current_coords = torch.tensor(c_list)
-                connected_node = nodes[tuple(c_list)]
+                current_node = nodes[tuple(c_list)]
 
                 for neighbour_offset in six_neighbourhood:
                     neighbour_coords = current_coords + neighbour_offset
@@ -74,7 +74,7 @@ def build_neighbourhood_adjacency(pd, pw, ph):
 
                     n_list = neighbour_coords.tolist()
                     neighbour_node = nodes[tuple(n_list)]
-                    edges.append(Edge(connected_node, neighbour_node))
+                    edges.append(Edge(current_node, neighbour_node))
 
     return nodes, edges
 
@@ -91,16 +91,6 @@ def weight_from_edgecost(edgecost, feature_std):
 
 def calc_prims_graph(feature_volume, patch_len):
 
-    def get_unique_neighbours_from_edges(node, unconnected_nb_node_edges):
-        unconnected_nb_node_nodes = []
-        for edg in unconnected_nb_node_edges:
-            node_a, node_b = edg.get_nodes()
-            if node_a is node:
-                unconnected_nb_node_nodes.append(node_b)
-            else:
-                unconnected_nb_node_nodes.append(node_a)
-        return list(dict.fromkeys(unconnected_nb_node_nodes))
-
     pd, pw, ph = (torch.tensor(feature_volume.shape) / patch_len).int().tolist()
     nodes, edges = build_neighbourhood_adjacency(pd, pw, ph)
 
@@ -114,7 +104,7 @@ def calc_prims_graph(feature_volume, patch_len):
         print()
         edg.weight += patch_difference/feat_a.numel()
 
-    feature_std = feature_volume.std(uunconnected_nb_nodeiased=False)
+    feature_std = feature_volume.std(unbiased=False)
 
     for edg in edges:
         edg.weight = -weight_from_edgecost(edg.weight, feature_std)

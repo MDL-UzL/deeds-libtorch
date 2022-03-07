@@ -16,7 +16,7 @@ class TestPrimsMst(unittest.TestCase):
         #########################################################
         # Prepare inputs
         GRID_DIVISOR = torch.tensor(1).int()
-        D,H,W = 8,4,4
+        D,H,W = 4,4,4
         mind_image = torch.arange(D*H*W).reshape(D,H,W).float()
         #########################################################
         # Get cpp output
