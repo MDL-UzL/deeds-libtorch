@@ -111,7 +111,6 @@ void dataCostCL(
     unsigned long* data2,
     float* results,
     int m,int n,int o,int len2,int step1,int hw,float quant,float alpha,int randnum){
-    cout<<"d"<<flush;
     // Returns mind sums of patches (voxel size images are reduced to patches) given two mind-images
 
     int len=hw*2+1;
@@ -138,6 +137,23 @@ void dataCostCL(
     int op=o+pad2;//o_padded
     int szp=mp*np*op;
     unsigned long* data2p=new unsigned long[szp];
+
+    // std::cout<<"\ndata=";
+    // for(int pri=0;pri<m*n*o;pri++){
+    //     std::cout<<data[pri]<<" ";
+    // }
+    // std::cout<<"\n";
+    //     std::cout<<"\ndata2=";
+    // for(int pri=0;pri<m*n*o;pri++){
+    //     std::cout<<data2[pri]<<" ";
+    // }
+    // std::cout<<"\n";
+    // std::cout<<"\ndata2p=";
+    // for(int pri=0;pri<szp;pri++){
+    //     std::cout<<data2p[pri]<<" ";
+    // }
+    std::cout<<"\n";
+
 
     // apply padding quant * search_radius in all 8 directions
     for(int k=0;k<op;k++){
@@ -223,6 +239,7 @@ void dataCostCL(
                                 unsigned long t1=data   [i+y1 + (j+x1)*m+   (k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
                                 unsigned long t2=data2p [i+y2 + (j+x2)*mp+  (k+z2)*mp*np];//last term is search offset
                                 // t2=data2p            [i+y2   (j+x2)*mp+  (k+z2)*mp*np]; // y2,x2,z2 contain search offset
+                                // std::cout<<"\npopcountll: "<<__builtin_popcountll(t1^t2)<<"\n";
                                 out1+=__builtin_popcountll(t1^t2); //bitwise xor -> are mind features either both1 or both zero? count ones in bitstream // patch2 - patch1
                                 //count differences in mind features per voxel in a patch for every search position
                                 //patch_cube_size * search_cube_size dimension
@@ -451,9 +468,15 @@ torch::Tensor datacost_d_datacostCL(torch::Tensor pMind_img_a, torch::Tensor pMi
     int o = mind_img_a_copy.size(2);
 
     int64_t* mind_img_a = mind_img_a_copy.data_ptr<int64_t>();
+    // std::cout<<"\nmind_img_a=";
+    // for(int pri=0;pri<m*n*o;pri++){
+    //     std::cout<<mind_img_a[pri]<<" ";
+    // }
+    // std::cout<<"\n";
     int64_t* mind_img_b = mind_img_b_copy.data_ptr<int64_t>();
-    unsigned long* mind_img_a_ulong = (unsigned long*)((void*)&mind_img_a);
-	unsigned long* mind_img_b_ulong = (unsigned long*)((void*)&mind_img_b);
+    // unsigned long* mind_img_a_ulong = (unsigned long*)((void*)&mind_img_a);
+    unsigned long* mind_img_a_ulong = reinterpret_cast<unsigned long*>(mind_img_a);
+	unsigned long* mind_img_b_ulong = reinterpret_cast<unsigned long*>(mind_img_b);
     int grid_divisor = *(pGrid_divisor.data_ptr<int>());
     int hw = *(pHw.data_ptr<int>());
     int dilation = *(pDilation.data_ptr<int>());
