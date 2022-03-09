@@ -140,9 +140,9 @@ class TestDatacostD(unittest.TestCase):
         ALPHA = torch.tensor(1.0)
 
         DILATION = torch.tensor(1).int()
-        HW = torch.tensor(3).int()
+        HW = torch.tensor(1).int()
         PATCH_LENGTH = torch.tensor(2).int()
-        D,H,W = 9,9,9
+        D,H,W = 11,11,11
 
         BIT_VALS = True
         if BIT_VALS:

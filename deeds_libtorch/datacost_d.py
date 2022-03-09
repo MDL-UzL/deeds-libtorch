@@ -104,14 +104,22 @@ def calc_datacost(feature_volume_a, feature_volume_b,
     feature_volume_a = feature_volume_a.unsqueeze(0)
     feature_volume_b = feature_volume_b.unsqueeze(0)
 
-    conv_pad_lens = [
-        (D_CONV_PAD/2).floor().int().item(), (D_CONV_PAD/2).ceil().int().item(),
-        (H_CONV_PAD/2).floor().int().item(), (H_CONV_PAD/2).ceil().int().item(),
-        (W_CONV_PAD/2).floor().int().item(), (W_CONV_PAD/2).ceil().int().item()
-    ]
-    pad_conv = torch.nn.ReplicationPad3d(conv_pad_lens)
-    # feature_volume_a = pad_conv(feature_volume_a)
-    # feature_volume_b = pad_conv(feature_volume_b)
+    # conv_a_pad_lens = [
+    #     (D_CONV_PAD/2).floor().int().item(), (D_CONV_PAD/2).ceil().int().item(),
+    #     (H_CONV_PAD/2).floor().int().item(), (H_CONV_PAD/2).ceil().int().item(),
+    #     (W_CONV_PAD/2).floor().int().item(), (W_CONV_PAD/2).ceil().int().item()
+    # ]
+
+    # conv_b_pad_lens = [
+    #     (D_CONV_PAD/2).floor().int().item(), (D_CONV_PAD/2).ceil().int().item(),
+    #     (H_CONV_PAD/2).floor().int().item(), (H_CONV_PAD/2).ceil().int().item(),
+    #     (W_CONV_PAD/2).floor().int().item(), (W_CONV_PAD/2).ceil().int().item()
+    # ]
+
+    # pad_conv_a = torch.nn.ReplicationPad3d(conv_a_pad_lens)
+    # pad_conv_b = torch.nn.ReplicationPad3d(conv_b_pad_lens)
+    # feature_volume_a = pad_conv_a(feature_volume_a)
+    # feature_volume_b = pad_conv_b(feature_volume_b)
 
     search_width = 2*hw+1
     search_labelcount = search_width**3
@@ -157,6 +165,13 @@ def calc_datacost(feature_volume_a, feature_volume_b,
         .expand([search_labelcount, C_FEAT] + offset_k_len.tolist())
     ) # [C_OUT, C_IN, KD, KH, KW]
 
+    if vox_expanded_kernel.shape[-1]%2 == 0:
+        even_kernel_pad = torch.stack(
+            [(patch_length-1)%2*patch_length,
+            torch.zeros(3)], dim=-1
+        ).int().view(-1).tolist()
+        pad_conv_b = torch.nn.ReplicationPad3d(even_kernel_pad)
+        feature_volume_b = pad_conv_b(feature_volume_b)
     # TODO: Implement vox_hw_dilation_x, vox_hw_dilation_y, vox_hw_dilation_z of CPP code controlled by RAND_SAMPLES variable
     # This adds hw_dilation to the expanded voxel grid (not implemented since voxel hw_dilation is always 1 in current deeds code)
 
