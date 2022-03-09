@@ -137,12 +137,12 @@ class TestDatacostD(unittest.TestCase):
         assert test_equal_tensors(cpp_warped, torch_warped), "Tensors do not match"
 
     def test_dataCostCL(self):
-        ALPHA = torch.tensor(1.0)
+        ALPHA = torch.tensor(2.0)
 
         DILATION = torch.tensor(1).int()
         HW = torch.tensor(1).int()
         PATCH_LENGTH = torch.tensor(2).int()
-        D,H,W = 11,11,11
+        D,H,W = 13,12,13
 
         BIT_VALS = True
         if BIT_VALS:
@@ -170,8 +170,8 @@ class TestDatacostD(unittest.TestCase):
         torch_costs = log_wrapper(calc_datacost, mind_image_a, mind_image_b, PATCH_LENGTH.item(), HW, DILATION.item(), ALPHA)
 
         *_, PD, PH, PW = torch_costs.shape
-        torch_costs = (torch_costs.view(-1,PD,PH,PW)).permute(1,2,3,0)
-        assert test_equal_tensors(cpp_costs, torch_costs), "Tensors do not match"
+        torch_costs = (torch_costs.view(-1,PD,PH,PW))
+        assert test_equal_tensors(cpp_costs.permute(3,0,2,1), torch_costs), "Tensors do not match"
 
     def test_warpImageCL(self):
         assert False
