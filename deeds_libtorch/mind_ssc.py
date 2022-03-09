@@ -74,21 +74,19 @@ def mind_ssc(img, delta=1, sigma=0.8):
     # build kernel
     idx_shift1 = six_neighbourhood.unsqueeze(1).repeat(1,6,1).view(-1,3)[mask, :].long()
     idx_shift2 = six_neighbourhood.unsqueeze(0).repeat(6,1,1).view(-1,3)[mask, :].long()
-    mshift1 = torch.zeros((12, 1, 3, 3, 3), device=device)
-    mshift1.view(-1)[torch.arange(12, device=device) * 27 + idx_shift1[:,0] * 9 + idx_shift1[:, 1] * 3 + idx_shift1[:, 2]] = 1
-    # mshift1/2 each contain 12 patch coordinates (for the difference 24 patches are needed I(12) - I(12) resulting in 12 edge differences)
-    # (mshift2+mshift1).permute(1,2,3,4,0) will yield ssc features: per column 2 patches are invoked to calculate a feature
-    mshift2 = torch.zeros((12, 1, 3, 3, 3), device=device)
-    mshift2.view(-1)[torch.arange(12, device=device) * 27 + idx_shift2[:,0] * 9 + idx_shift2[:, 1] * 3 + idx_shift2[:, 2]] = 1
+    kernel_mind_patch_a_select = torch.zeros((12, 1, 3, 3, 3), device=device)
+    kernel_mind_patch_a_select.view(-1)[torch.arange(12, device=device) * 27 + idx_shift1[:,0] * 9 + idx_shift1[:, 1] * 3 + idx_shift1[:, 2]] = 1
+    # kernel_mind_patch_a_select/2 each contain 12 patch coordinates (for the difference 24 patches are needed I(12) - I(12) resulting in 12 edge differences)
+    # (kernel_mind_patch_b_select+kernel_mind_patch_a_select).permute(1,2,3,4,0) will yield ssc features: per column 2 patches are invoked to calculate a feature
+    kernel_mind_patch_b_select = torch.zeros((12, 1, 3, 3, 3), device=device)
+    kernel_mind_patch_b_select.view(-1)[torch.arange(12, device=device) * 27 + idx_shift2[:,0] * 9 + idx_shift2[:, 1] * 3 + idx_shift2[:, 2]] = 1
     rpad = nn.ReplicationPad3d(delta)
-    padded_img = rpad(img)
-    padded_img[0,0,0,2,2] = 0
-    padded_img[0,0,-1,2,2] = 0
+
     # compute patch-ssd
-    mind_features_patches_a = F.conv3d(rpad(img), mshift1, dilation=delta)
+    mind_selected_patches_a = F.conv3d(rpad(img), kernel_mind_patch_a_select, dilation=delta)
     # convolute kernel with padded version of image (3)^n = 3^3 = 27 steps (for every voxel calculate patch distance from this voxels patch to adjacent patches)
-    mind_features_patches_b = F.conv3d(rpad(img), mshift2, dilation=delta)
-    unsmoothed_mind = ((mind_features_patches_a - mind_features_patches_b) ** 2) # same as w1 in deeds code but for 12-neighbourhood
+    mind_selected_patches_b = F.conv3d(rpad(img), kernel_mind_patch_b_select, dilation=delta) #
+    unsmoothed_mind = ((mind_selected_patches_a - mind_selected_patches_b) ** 2) # same as w1 in deeds code but for 12-neighbourhood
     # ssd = smooth(unsmoothed_mind, sigma)
     ssd = unsmoothed_mind
     # MIND equation
