@@ -84,7 +84,7 @@ def warpAffine(image, affine_mat, w, v, u):
     return warped
 
 def calc_datacost(feature_volume_a, feature_volume_b,
-    patch_length, hw, stride, alpha):
+    patch_length, hw, dilation, alpha):
     assert feature_volume_a.shape == feature_volume_b.shape
 
     C_FEAT = feature_volume_a.shape[0]
@@ -110,7 +110,7 @@ def calc_datacost(feature_volume_a, feature_volume_b,
     search_width = 2*hw+1
     search_labelcount = search_width**3
 
-    pad_b = torch.nn.ReplicationPad3d((hw*stride,)*6)
+    pad_b = torch.nn.ReplicationPad3d((2*hw*dilation,)*6)
     feature_volume_b = pad_b(feature_volume_b)
 
     # Conv3d(12, out_channels, kernel_size)
