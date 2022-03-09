@@ -84,14 +84,15 @@ def warpAffine(image, affine_mat, w, v, u):
     return warped
 
 def calc_datacost(feature_volume_a, feature_volume_b,
-    grid_divisor, hw, stride, alpha):
+    patch_length, hw, stride, alpha):
     assert feature_volume_a.shape == feature_volume_b.shape
 
     C_FEAT = feature_volume_a.shape[0]
     SPATIAL = torch.tensor(feature_volume_a.shape[-3:])
 
-    patch_length = (SPATIAL/grid_divisor).floor().int()
-    PD, PH, PW = (SPATIAL/patch_length).ceil().int()
+    patch_length = torch.tensor([patch_length, patch_length, patch_length])
+    PD, PH, PW = (SPATIAL/patch_length).floor().int()
+    # patch_length  = (SPATIAL/patch_length).ceil().int()
     D_CONV_PAD, H_CONV_PAD, W_CONV_PAD = (SPATIAL/patch_length).ceil()*patch_length-SPATIAL
     # Add batch dimension
     feature_volume_a = feature_volume_a.unsqueeze(0)
@@ -103,8 +104,8 @@ def calc_datacost(feature_volume_a, feature_volume_b,
         (W_CONV_PAD//2).int().item(), (W_CONV_PAD/2).ceil().int().item()
     ]
     pad_conv = torch.nn.ReplicationPad3d(conv_pad_lens)
-    feature_volume_a = pad_conv(feature_volume_a)
-    feature_volume_b = pad_conv(feature_volume_b)
+    # feature_volume_a = pad_conv(feature_volume_a)
+    # feature_volume_b = pad_conv(feature_volume_b)
 
     search_width = 2*hw+1
     search_labelcount = search_width**3

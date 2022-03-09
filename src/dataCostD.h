@@ -198,7 +198,9 @@ void dataCostCL(
     float alpha1=0.5*alphai/(float)(maxsamp); //alpha1 = step/(alpha*quant) // this scales the mind datacost against the quadratic offset distance regularisation
 
     //unsigned long buffer[1000];
-
+    std::cout<<"skipz="<<skipz;
+    std::cout<<"skipy="<<skipy;
+    std::cout<<"skipx="<<skipx;
 #pragma omp parallel for
     // iterate over patches
     for(int z=0;z<o1;z++){ // iterate gridded z
@@ -254,7 +256,7 @@ void dataCostCL(
             }
         }
     }
-
+    std::cout<<"\nalpha1: "<<alpha1<<"\n";
 
     delete[] data2p;
 
