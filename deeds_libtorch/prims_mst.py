@@ -101,7 +101,7 @@ def calc_prims_graph(feature_volume, patch_len):
         node_a.patch_content, node_b.patch_content = feat_a, feat_b
         # Calculate SAD of (mind) features of patches
         patch_difference = (feat_a - feat_b).abs().sum()
-        print()
+        
         edg.weight += patch_difference/feat_a.numel()
 
     feature_std = feature_volume.std(unbiased=False)
