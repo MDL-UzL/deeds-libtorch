@@ -142,7 +142,7 @@ class TestDatacostD(unittest.TestCase):
         DILATION = torch.tensor(1).int()
         HW = torch.tensor(1).int()
         PATCH_LENGTH = torch.tensor(1).int()
-        D,H,W = 3,2,4
+        D,H,W = 2,2,2
 
         BIT_VALS = True
         if BIT_VALS:
@@ -152,7 +152,7 @@ class TestDatacostD(unittest.TestCase):
             fill_val_b = 0b0
             packed_long_a = mind_image_a.long().fill_(fill_val_a)
             packed_long_b = mind_image_b.long().fill_(fill_val_b)
-            packed_long_b[0,0,0] = 0b0000_10000
+            packed_long_b[0,0,0] = 0b0000_10000_00000_00000_00000_00000_00000_00000_00000_00000_00000_00000_00000
             mind_image_a = extract_features(unpackbits(packed_long_a, 64)).transpose(0,-1)
             mind_image_b = extract_features(unpackbits(packed_long_b, 64)).transpose(0,-1)
             # repacked_a = packbits(binaries_a, torch.long)
