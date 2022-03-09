@@ -239,7 +239,7 @@ void dataCostCL(
                                 unsigned long t1=data   [i+y1 + (j+x1)*m+   (k+z1)*m*n];//buffer[i+j*step1+k*step1*step1];
                                 unsigned long t2=data2p [i+y2 + (j+x2)*mp+  (k+z2)*mp*np];//last term is search offset
                                 // t2=data2p            [i+y2   (j+x2)*mp+  (k+z2)*mp*np]; // y2,x2,z2 contain search offset
-                                // std::cout<<"\npopcountll: "<<__builtin_popcountll(t1^t2)<<"\n";
+                                std::cout<<"\npopcountll: "<<__builtin_popcountll(t1^t2)<<"\n";
                                 out1+=__builtin_popcountll(t1^t2); //bitwise xor -> are mind features either both1 or both zero? count ones in bitstream // patch2 - patch1
                                 //count differences in mind features per voxel in a patch for every search position
                                 //patch_cube_size * search_cube_size dimension
@@ -492,5 +492,5 @@ torch::Tensor datacost_d_datacostCL(torch::Tensor pMind_img_a, torch::Tensor pMi
 	std::vector<float> results_vect{results, results+results_len};
 
     auto float_options = torch::TensorOptions().dtype(torch::kFloat);
-	return torch::from_blob(results_vect.data(), {m,n,o,int(pow(hw*2+1,3))}, float_options).clone();
+	return torch::from_blob(results_vect.data(), {m/grid_divisor,n/grid_divisor,o/grid_divisor,int(pow(hw*2+1,3))}, float_options).clone();
 }

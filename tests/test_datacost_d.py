@@ -51,12 +51,13 @@ def packbits(data, dtype):
     return out.reshape(SPATIAL_SHAPE)
 
 def mind_twelve_to_long(mind_tensor):
-    mind_tensor = mind_tensor.clone().long()
     MIND_DIM = 12
+    assert mind_tensor.shape[-1] == MIND_DIM
+    mind_tensor = mind_tensor.clone().long()
     SPATIAL_SHAPE = mind_tensor.shape[0:-1]
     out = torch.empty(SPATIAL_SHAPE).view(-1).long()
 
-    for t_idx, mind_twelve in enumerate(mind_tensor.view(-1, MIND_DIM)):
+    for t_idx, mind_twelve in enumerate(mind_tensor.reshape(-1, MIND_DIM)):
         bits = torch.tensor(compress_features(mind_twelve))
         long_value = packbits(bits, torch.long)
         out[t_idx] = long_value
@@ -140,11 +141,11 @@ class TestDatacostD(unittest.TestCase):
 
         DILATION = torch.tensor(1).int()
         HW = torch.tensor(0).int()
-        GRID_DIVISOR = torch.tensor(1).int()
-        D,H,W = 1,1,1
+        GRID_DIVISOR = torch.tensor(2).int()
+        D,H,W = 7,7,7
 
-        mind_image_a = 1*torch.ones(D*H*W*12).reshape(D,H,W,12).float()
-        mind_image_b = 0*torch.ones(D*H*W*12).reshape(D,H,W,12).float()
+        mind_image_a = 0*torch.ones(D*H*W*12).reshape(12,D,H,W).float()
+        mind_image_b = 1*torch.ones(D*H*W*12).reshape(12,D,H,W).float()
 
         # fill_val_a = 0b0000_11000_00000_00000_00000_00000_00000_00000_00000_00000_00000_00000_00000
         # fill_val_b = 0b0
@@ -153,9 +154,8 @@ class TestDatacostD(unittest.TestCase):
         # binaries_a = unpackbits(mind_image_a, 64)
         # repacked_a = packbits(binaries_a, torch.long)
         # features_a = extract_features(binaries_a)
-        packed_long_a = mind_twelve_to_long(mind_image_a)
-        packed_long_b = mind_twelve_to_long(mind_image_b)
-
+        packed_long_a = mind_twelve_to_long(mind_image_a.transpose(0,-1))
+        packed_long_b = mind_twelve_to_long(mind_image_b.transpose(0,-1))
 
         #########################################################
         # Get cpp output
@@ -163,7 +163,21 @@ class TestDatacostD(unittest.TestCase):
 
         #########################################################
         # Get torch output
-        torch_costs = log_wrapper(calc_datacost, mind_image_a, mind_image_b, GRID_DIVISOR, HW, DILATION, ALPHA)
+        torch_costs = log_wrapper(calc_datacost, mind_image_a, mind_image_b, GRID_DIVISOR.item(), HW, DILATION.item(), ALPHA)
+
+        skipz = 1
+        skipy = 1
+        skipx = 1
+        alphai = GRID_DIVISOR/(ALPHA*DILATION)
+        maxsamp = (
+            (GRID_DIVISOR/skipz).ceil()
+            *(GRID_DIVISOR/skipx).ceil()
+            *(GRID_DIVISOR/skipy).ceil()
+        )
+
+        alpha_unary=0.5*alphai/maxsamp
+        *_, PD, PH, PW = torch_costs.shape
+        torch_costs = (torch_costs.view(-1,PD,PH,PW)*alpha_unary).permute(1,2,3,0)
         assert test_equal_tensors(cpp_costs, torch_costs), "Tensors do not match"
 
     def test_warpImageCL(self):
