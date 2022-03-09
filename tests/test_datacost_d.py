@@ -141,8 +141,8 @@ class TestDatacostD(unittest.TestCase):
 
         DILATION = torch.tensor(1).int()
         HW = torch.tensor(1).int()
-        PATCH_LENGTH = torch.tensor(2).int()
-        D,H,W = 13,12,13
+        PATCH_LENGTH = torch.tensor(1).int()
+        D,H,W = 3,2,4
 
         BIT_VALS = True
         if BIT_VALS:
@@ -152,6 +152,7 @@ class TestDatacostD(unittest.TestCase):
             fill_val_b = 0b0
             packed_long_a = mind_image_a.long().fill_(fill_val_a)
             packed_long_b = mind_image_b.long().fill_(fill_val_b)
+            packed_long_b[0,0,0] = 0b0000_10000
             mind_image_a = extract_features(unpackbits(packed_long_a, 64)).transpose(0,-1)
             mind_image_b = extract_features(unpackbits(packed_long_b, 64)).transpose(0,-1)
             # repacked_a = packbits(binaries_a, torch.long)
@@ -164,6 +165,7 @@ class TestDatacostD(unittest.TestCase):
         #########################################################
         # Get cpp output
         cpp_costs = log_wrapper(CPP_DEEDS_MODULE.datacost_d_datacost_cl, packed_long_a, packed_long_b, PATCH_LENGTH, HW, DILATION, ALPHA)
+        cpp_costs = cpp_costs.permute(3,0,1,2)
 
         #########################################################
         # Get torch output
@@ -171,7 +173,8 @@ class TestDatacostD(unittest.TestCase):
 
         *_, PD, PH, PW = torch_costs.shape
         torch_costs = (torch_costs.view(-1,PD,PH,PW))
-        assert test_equal_tensors(cpp_costs.permute(3,0,2,1), torch_costs), "Tensors do not match"
+        # Permute y,x in torch tensor and move search features to the front.
+        assert test_equal_tensors(cpp_costs, torch_costs), "Tensors do not match"
 
     def test_warpImageCL(self):
         assert False

@@ -465,9 +465,9 @@ torch::Tensor datacost_d_datacostCL(torch::Tensor pMind_img_a, torch::Tensor pMi
     torch::Tensor mind_img_a_copy = pMind_img_a.clone();
     torch::Tensor mind_img_b_copy = pMind_img_b.clone();
 
-	int m = mind_img_a_copy.size(0);
+	int o = mind_img_a_copy.size(0);
     int n = mind_img_a_copy.size(1);
-    int o = mind_img_a_copy.size(2);
+    int m = mind_img_a_copy.size(2);
 
     int64_t* mind_img_a = mind_img_a_copy.data_ptr<int64_t>();
     // std::cout<<"\nmind_img_a=";
@@ -488,11 +488,11 @@ torch::Tensor datacost_d_datacostCL(torch::Tensor pMind_img_a, torch::Tensor pMi
     int results_len = m*n*o*pow(hw*2+1,3);
 	float* results = new float[results_len];
     //len2 is 0 since its unused in fuction and RANDNUM = 1 since this is fixed for all calls in deeds
-    dataCostCL(mind_img_a_ulong, mind_img_b_ulong, results, m, n, o, 0, grid_divisor, hw, dilation, alpha, 1);
-
+    dataCostCL(mind_img_a_ulong, mind_img_b_ulong, results, o, m, n, 0, grid_divisor, hw, dilation, alpha, 1);
+    // use o, m, n here as ordering is changed of y,x in cpp code
 	// Prepare lib output
 	std::vector<float> results_vect{results, results+results_len};
 
     auto float_options = torch::TensorOptions().dtype(torch::kFloat);
-	return torch::from_blob(results_vect.data(), {m/grid_divisor,n/grid_divisor,o/grid_divisor,int(pow(hw*2+1,3))}, float_options).clone();
+	return torch::from_blob(results_vect.data(), {n/grid_divisor,m/grid_divisor,o/grid_divisor,int(pow(hw*2+1,3))}, float_options).clone();
 }
