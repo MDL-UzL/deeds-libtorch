@@ -222,7 +222,7 @@ void estimateAffine2(float* X,float* Xprev,float* im1,float* im2,float* costall,
     }
 
     float X1[16];
-    affineRobust(X1,pts1,pts2,valsz);
+    affineRobust(X1,pts1,pts2,valsz); //TODO
     //X1 is the mini affine matrix update to be multiplied with Xprev
     matmult(X1,Xprev,X); // X is returned
 

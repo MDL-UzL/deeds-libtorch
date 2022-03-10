@@ -172,7 +172,7 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
 	}
 
 
-    jacobiSVD3(K,U,V);
+    jacobiSVD3(K,U,V); //TODO
 
     for(int i=0;i<16;i++){
         R[i]=0.0; RT[i]=0.0;
@@ -194,7 +194,7 @@ void findRigid(float* RT,float* pts1t,float* pts2t,int len){
         pts2_4[2+i*4]=pts2[2+i*3]; pts2_4[3+i*4]=1.0f;
     }*/
 
-    qrsolve(Rpts2,R,pts2,4,len);
+    qrsolve(Rpts2,R,pts2,4,len); //TODO
 
 	//    printf("Rpt: %f, %f, %f\n",Rpts2[0],Rpts2[len],Rpts2[2*len]);
 
@@ -289,9 +289,9 @@ void affineRobust(float* RT,float* pts1,float* pts2,int len){
 		}
 
         if(RIGID)
-            findRigid(RT,pts1b,pts2b,lenh);
+            findRigid(RT,pts1b,pts2b,lenh); //TODO
         else
-            qrsolve(RT,pts1b,pts2b,lenh,4);
+            qrsolve(RT,pts1b,pts2b,lenh,4); //TODO
 	}
 	delete[] pts1b; delete[] pts2b; delete[] err; delete[] err2;
 }

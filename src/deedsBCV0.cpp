@@ -270,7 +270,7 @@ int main (int argc, char * const argv[]) {
         cout<<"M"<<flush;
         gettimeofday(&time1, NULL);
         //dataCost uses MIND features
-        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,args.alpha,RAND_SAMPLES); //TODO
+        dataCostCL((unsigned long*)im1b_mind,(unsigned long*)warped_mind,costall,m,n,o,len3,step1,hw1,quant1,args.alpha,RAND_SAMPLES); //DONE
         gettimeofday(&time2, NULL);
 
 		timeData+=time2.tv_sec+time2.tv_usec/1e6-(time1.tv_sec+time1.tv_usec/1e6);
