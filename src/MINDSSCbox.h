@@ -304,9 +304,9 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> mind_ssc_descriptor(
     torch::Tensor image,
     torch::Tensor pQuantisation_step) {
 
-    int m = image.size(0);
+    int o = image.size(0);
     int n = image.size(1);
-    int o = image.size(2);
+    int m = image.size(2);
 
     torch::Tensor image_copy = image.clone();
 
@@ -317,7 +317,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> mind_ssc_descriptor(
     float* output_mind_twelve = new float[m*n*o*12];
     float* output_mind_bare = new float[m*n*o*12];
 
-    descriptor(output, input_image, m, n, o, *quantisation_step, output_mind_twelve, output_mind_bare);
+    descriptor(output, input_image, o, m, n, *quantisation_step, output_mind_twelve, output_mind_bare);
     std::vector<uint64_t> output_vect{output, output+m*n*o};
     std::vector<float> output_mind_bare_vect{output_mind_bare, output_mind_bare+m*n*o*12};
     std::vector<float> output_mind_twelve_vect{output_mind_twelve, output_mind_twelve+m*n*o*12};
@@ -327,8 +327,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> mind_ssc_descriptor(
     return std::tuple<
             torch::Tensor,
             torch::Tensor, torch::Tensor>(
-        torch::from_blob(output_vect.data(), {m,n,o}, options).clone(),
-        torch::from_blob(output_mind_twelve_vect.data(), {12,m,n,o}, float_options).clone(),
-        torch::from_blob(output_mind_bare_vect.data(), {12,m,n,o}, float_options).clone()
+        torch::from_blob(output_vect.data(), {n,m,o}, options).clone(),
+        torch::from_blob(output_mind_twelve_vect.data(), {12,n,m,o}, float_options).clone(),
+        torch::from_blob(output_mind_bare_vect.data(), {12,n,m,o}, float_options).clone()
     );
 }
