@@ -15,6 +15,20 @@
             "console": "integratedTerminal",
         },
         {
+            "name": "Python: test_mind_ssc",
+            "type": "python",
+            "request": "launch",
+            "program": "./tests/test_mind_ssc.py",
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "Python: test_prims_mst",
+            "type": "python",
+            "request": "launch",
+            "program": "./tests/test_prims_mst.py",
+            "console": "integratedTerminal",
+        },
+        {
             "name": "Python: test_transformations",
             "type": "python",
             "request": "launch",
