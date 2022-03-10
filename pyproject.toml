@@ -13,6 +13,7 @@ ninja = "^1.10.2"
 tqdm = "^4.62.3"
 jupyterlab = "^3.2.9"
 matplotlib = "^3.5.1"
+bitarray = "^2.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
