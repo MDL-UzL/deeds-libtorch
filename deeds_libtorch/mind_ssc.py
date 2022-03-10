@@ -51,7 +51,8 @@ def mind_ssc_deeds(img, delta=1, sigma=0.8):
                                       [delta, 1, 2],
                                       [delta, 1, 1],
                                       [delta, 2, 1]])
-def mind_ssc(img, delta=1, sigma=0.8):
+
+def mind_ssc(img, delta=1, use_smoothing=True, sigma=0.8, compensation_factor=5.):
     # see http://mpheinrich.de/pub/miccai2013_943_mheinrich.pdf for details on the MIND-SSC descriptor
     img = img.unsqueeze(0).unsqueeze(0)
     device = img.device
@@ -86,17 +87,20 @@ def mind_ssc(img, delta=1, sigma=0.8):
     mind_selected_patches_a = F.conv3d(rpad(img), kernel_mind_patch_a_select, dilation=delta)
     # convolute kernel with padded version of image (3)^n = 3^3 = 27 steps (for every voxel calculate patch distance from this voxels patch to adjacent patches)
     mind_selected_patches_b = F.conv3d(rpad(img), kernel_mind_patch_b_select, dilation=delta) #
-    unsmoothed_mind = ((mind_selected_patches_a - mind_selected_patches_b) ** 2) # same as w1 in deeds code but for 12-neighbourhood
-    # ssd = smooth(unsmoothed_mind, sigma)
-    ssd = unsmoothed_mind
+    ssd = ((mind_selected_patches_a - mind_selected_patches_b) ** 2) # same as w1 in deeds code but for 12-neighbourhood
+
     # MIND equation
-    mind = ssd - torch.min(ssd, 1, keepdim=True)[0]
-    # mind_var = torch.max(torch.mean(mind, 1, keepdim=True), 1e-6*torch.ones_like(mind))
-    # mind_var = torch.clamp(mind_var, mind_var.mean() * 0.001, mind_var.mean() * 1000)
-    # mind /= mind_var
-    # mind = torch.exp(-mind)
+    if use_smoothing:
+        mind = ssd - torch.min(smooth(ssd, sigma), 1, keepdim=True)[0]
+    else:
+        mind = ssd - torch.min(ssd, 1, keepdim=True)[0]
+
+    mind_var = torch.max(torch.mean(mind, 1, keepdim=True), 1e-6*torch.ones_like(mind))
+    mind_var = torch.clamp(mind_var, mind_var.mean() * 0.001, mind_var.mean() * 1000)
+    mind /= mind_var
+    mind = torch.exp(-mind)
 
     #permute to have same ordering as C++ code
     mind = mind[:, torch.tensor([6, 8, 1, 11, 2, 10, 0, 7, 9, 4, 5, 3], dtype=torch.long), :, :, :]
 
-    return mind
+    return compensation_factor*mind # This factor can be used to approximate original deeds values
